@@ -16,16 +16,11 @@ type ChunksMerger struct {
 	vectorFn        vector.AllocateVectorFnfunc
 	dropDuplicates  bool
 
-	chunkWriterFn func() model.Writer
-	chunkReaderFn func(model.Writer) model.Reader
-
 	logger              model.Logger
 	defaultLoggerFields map[string]interface{}
 }
 
 func New(
-	chunkWriterFn func() model.Writer,
-	chunkReaderFn func(model.Writer) model.Reader,
 	keyFn key.AllocateKeyFn,
 	vectorFn vector.AllocateVectorFnfunc,
 	chunkBufferSize int,
@@ -36,8 +31,6 @@ func New(
 		keyFn:           keyFn,
 		vectorFn:        vectorFn,
 		dropDuplicates:  dropDuplicates,
-		chunkWriterFn:   chunkWriterFn,
-		chunkReaderFn:   chunkReaderFn,
 	}
 }
 
@@ -49,7 +42,8 @@ func (c *ChunksMerger) SetLogger(logger model.Logger) {
 	c.logger = logger
 }
 
-func (c *ChunksMerger) Merge(ctx context.Context, chunks []model.Reader) (rdr model.Reader, err error) {
+func (c *ChunksMerger) Merge(ctx context.Context, chunks []model.Reader, outputWriter model.Writer) (err error) {
+	defer outputWriter.Close()
 	c.trace("creating output buffer")
 	outputBuffer := c.vectorFn(c.keyFn)
 
@@ -59,7 +53,7 @@ func (c *ChunksMerger) Merge(ctx context.Context, chunks []model.Reader) (rdr mo
 		c.trace("creating chunk info")
 		err = chunkInfos.new(chunk, c.chunkBufferSize, c.vectorFn(c.keyFn))
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
@@ -69,8 +63,6 @@ func (c *ChunksMerger) Merge(ctx context.Context, chunks []model.Reader) (rdr mo
 	chunkInfos.resetOrder()
 
 	c.trace("creating output writer")
-	outputWriter := c.chunkWriterFn()
-	defer outputWriter.Close()
 
 	for {
 
@@ -78,7 +70,7 @@ func (c *ChunksMerger) Merge(ctx context.Context, chunks []model.Reader) (rdr mo
 			c.trace("writing buffer")
 			err := c.writeBuffer(ctx, outputWriter, outputBuffer)
 			if err != nil {
-				return nil, fmt.Errorf("can't write buffer: %w", err)
+				return fmt.Errorf("can't write buffer: %w", err)
 			}
 		}
 
@@ -90,7 +82,7 @@ func (c *ChunksMerger) Merge(ctx context.Context, chunks []model.Reader) (rdr mo
 		// search the smallest value across chunk buffers by comparing first elements only
 		minChunk, minIdx, err := smallestChunk.get(outputBuffer, chunkInfos, c.dropDuplicates)
 		if err != nil {
-			return nil, fmt.Errorf("can't get smallest value: %w", err)
+			return fmt.Errorf("can't get smallest value: %w", err)
 		}
 
 		c.tracef("smaller value found in chunk %d", minIdx)
@@ -99,15 +91,14 @@ func (c *ChunksMerger) Merge(ctx context.Context, chunks []model.Reader) (rdr mo
 		// remove the first element from the chunk we pulled the smallest value
 		err = c.updateChunks(chunkInfos, minChunk, minIdx, c.chunkBufferSize)
 		if err != nil {
-			return nil, fmt.Errorf("can't update chunks: %w", err)
+			return fmt.Errorf("can't update chunks: %w", err)
 		}
 	}
 
 	c.trace("resetting output buffer")
 	outputBuffer.Reset()
 
-	c.trace("creating output reader")
-	return c.chunkReaderFn(outputWriter), nil
+	return nil
 }
 
 var (

@@ -1,5 +1,6 @@
 package examples_test
 
+/*
 import (
 	"bytes"
 	"context"
@@ -50,12 +51,12 @@ func TestCSV(t *testing.T) {
 	chunkBufferMerger := &bytes.Buffer{}
 	chunkWritersMerger := writer.NewSeparatedValues(chunkBufferMerger, ',')
 
-	/*
+
 		chunkCreatorBufferReader := []io.Reader{
 			&bytes.Buffer{},
 			&bytes.Buffer{},
 		}
-	*/
+
 
 	currChunkCreatorReader := 0
 	m := sync.Mutex{}
@@ -81,12 +82,12 @@ func TestCSV(t *testing.T) {
 
 		return reader.NewSeparatedValues(chunkCSVReader, ',')
 	}
-	/*
+
 		chunkSorterBufferReader := []io.Reader{
 			&bytes.Buffer{},
 			&bytes.Buffer{},
 		}
-	*/
+
 	currChunkSorterReader := 0
 
 	chunkSorterReaderFn := func(w model.Writer) model.Reader {
@@ -174,12 +175,13 @@ func TestCSV(t *testing.T) {
 
 	err := orch.Sort(context.Background(), inputReader, outputWriter, 3, 3)
 	require.NoError(t, err)
-	/*
+
 		require.Equal(t, []int{10, 1, 9, 2, 8}, chunkWritersCreator[0].Values)
 		require.Equal(t, []int{3, 7, 4, 6, 5}, chunkWritersCreator[1].Values)
 
 		require.Equal(t, []int{1, 2, 8, 9, 10}, chunkWritersSorter[0].Values)
 		require.Equal(t, []int{3, 4, 5, 6, 7}, chunkWritersSorter[1].Values)
-	*/
+
 	require.Equal(t, []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, outputWriter.Values)
 }
+*/

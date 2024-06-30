@@ -35,6 +35,67 @@ func (cc *ChunkCreator) SetLogger(logger model.Logger) {
 func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks chan<- model.Reader) error {
 	currCount := 0
 	currChunk := cc.chunkWriterFn()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case chunks <- cc.chunkReaderFn(currChunk):
+	}
+
+	for {
+		foundNew := input.Next()
+
+		if (!foundNew || currCount >= cc.chunkSize) && currCount > 0 {
+
+			currCount = 0
+			cc.trace("closing chunk")
+			err := currChunk.Close()
+			if err != nil {
+				return fmt.Errorf("failed to close chunk: %w", err)
+			}
+
+			if !foundNew {
+				cc.trace("closing chunkWriters")
+
+				break
+			}
+
+			currChunk = cc.chunkWriterFn()
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case chunks <- cc.chunkReaderFn(currChunk):
+				cc.trace("added chunk to chunkWriters")
+			}
+		}
+
+		row, err := input.Read()
+		if err != nil {
+			return fmt.Errorf("failed to read row: %w", err)
+		}
+		cc.tracef("read row: %v", row)
+
+		err = currChunk.WriteRow(ctx, row)
+		if err != nil {
+			return fmt.Errorf("failed to write row: %w", err)
+		}
+
+		cc.tracef("wrote row: %v", row)
+
+		currCount++
+	}
+
+	if input.Err() != nil {
+		return fmt.Errorf("failed to read row: %w", input.Err())
+	}
+
+	return nil
+}
+
+func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chunks chan<- model.Reader) error {
+	currCount := 0
+	currChunk := cc.chunkWriterFn()
 	for {
 		foundNew := input.Next()
 

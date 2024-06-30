@@ -17,27 +17,27 @@ func TestAllocateTsv(t *testing.T) {
 		err      error
 	}{
 		{
-			row:      []interface{}{"1", "John", "Doe"},
+			row:      []string{"1", "John", "Doe"},
 			pos:      []int{0},
 			expected: "1",
 		},
 		{
-			row:      []interface{}{"1", "John", "Doe"},
+			row:      []string{"1", "John", "Doe"},
 			pos:      []int{1},
 			expected: "John",
 		},
 		{
-			row: []interface{}{"1", "John", "Doe"},
+			row: []string{"1", "John", "Doe"},
 			pos: []int{3},
 			err: assert.AnError,
 		},
 		{
-			row:      []interface{}{"1", "John", "Doe"},
+			row:      []string{"1", "John", "Doe"},
 			pos:      []int{0, 1},
 			expected: "1##!##John",
 		},
 		{
-			row:      []interface{}{"1", 10, "Doe"},
+			row:      []string{"1", "10", "Doe"},
 			pos:      []int{0, 1},
 			expected: "1##!##10",
 		},
@@ -49,7 +49,7 @@ func TestAllocateTsv(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result, err := key.AllocateTsv(test.row, test.pos...)
+		result, err := key.AllocateCsv(test.row, test.pos...)
 		if test.err != nil {
 			require.Error(t, err)
 			continue

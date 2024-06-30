@@ -22,7 +22,7 @@ func TestOrchestratorNilInput(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	err := orch.Sort(context.Background(), nil, outputMock, 0, 0)
 	require.ErrorIs(t, err, orchestrator.ErrNilInput)
@@ -37,7 +37,7 @@ func TestOrchestratorNilOutput(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	err := orch.Sort(context.Background(), inputMock, nil, 0, 0)
 	require.ErrorIs(t, err, orchestrator.ErrNilOutput)
@@ -53,7 +53,7 @@ func TestOrchestratorNilChunkCreator(t *testing.T) {
 	chunksMergerMock := mocks.NewMockChunksMerger(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(nil, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(nil, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	err := orch.Sort(context.Background(), inputMock, outputMock, 0, 0)
 	require.ErrorIs(t, err, orchestrator.ErrNilChunkCreator)
@@ -69,7 +69,7 @@ func TestOrchestratorNilChunkSorter(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, nil, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, nil, chunksMergerMock, trackerMock, false)
 
 	err := orch.Sort(context.Background(), inputMock, outputMock, 0, 0)
 	require.ErrorIs(t, err, orchestrator.ErrorNilChunkSorter)
@@ -85,7 +85,7 @@ func TestOrchestratorNilChunksMerger(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, nil, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, nil, trackerMock, false)
 
 	err := orch.Sort(context.Background(), inputMock, outputMock, 0, 0)
 	require.ErrorIs(t, err, orchestrator.ErrorNilChunksMerger)
@@ -101,7 +101,7 @@ func TestOrchestratorNilTracker(t *testing.T) {
 	chunksMergerMock := mocks.NewMockChunksMerger(t)
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, nil)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, nil, false)
 
 	err := orch.Sort(context.Background(), inputMock, outputMock, 0, 0)
 	require.ErrorIs(t, err, orchestrator.ErrorNilTracker)
@@ -118,7 +118,7 @@ func TestOrchestratorChunkCreatorNilChunk(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	chunkCreatorMock.On("Create", mock.Anything, inputMock, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		args.Get(2).(chan<- model.Reader) <- nil
@@ -139,7 +139,7 @@ func TestOrchestratorChunkSorterError(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	chunkReader := mocks.NewMockReader(t)
 
@@ -165,7 +165,7 @@ func TestOrchestratorChunkSorterNilChunk(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	chunkReader := mocks.NewMockReader(t)
 	ctx := context.Background()
@@ -190,7 +190,7 @@ func TestOrchestratorChunkMergerError(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	chunkReader := mocks.NewMockReader(t)
 
@@ -200,66 +200,10 @@ func TestOrchestratorChunkMergerError(t *testing.T) {
 		args.Get(2).(chan<- model.Reader) <- chunkReader
 	})
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
-	chunksMergerMock.On("Merge", mock.Anything, mock.Anything).Return(nil, assert.AnError)
+	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, mock.Anything).Return(assert.AnError)
 
 	err := orch.Sort(ctx, inputMock, outputMock, 0, 0)
 	require.ErrorIs(t, err, orchestrator.ErrFailedToMergeChunks)
-}
-
-func TestOrchestratorChunkMergerNilChunk(t *testing.T) {
-	t.Parallel()
-
-	inputMock := mocks.NewMockReader(t)
-	outputMock := mocks.NewMockWriter(t)
-
-	chunkSorterMock := mocks.NewMockChunkSorter(t)
-	chunksMergerMock := mocks.NewMockChunksMerger(t)
-	chunkCreatorMock := mocks.NewMockChunkCreator(t)
-	trackerMock := mocks.NewMockTracker(t)
-
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
-
-	chunkReader := mocks.NewMockReader(t)
-
-	ctx := context.Background()
-
-	chunkCreatorMock.On("Create", mock.Anything, inputMock, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-		args.Get(2).(chan<- model.Reader) <- chunkReader
-	})
-	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
-	chunksMergerMock.On("Merge", mock.Anything, mock.Anything).Return(nil, nil)
-
-	err := orch.Sort(ctx, inputMock, outputMock, 0, 0)
-	require.ErrorIs(t, err, orchestrator.ErrNilChunk)
-}
-
-func TestOrchestratorOutputWriteError(t *testing.T) {
-	t.Parallel()
-
-	inputMock := mocks.NewMockReader(t)
-	outputMock := mocks.NewMockWriter(t)
-
-	chunkSorterMock := mocks.NewMockChunkSorter(t)
-	chunksMergerMock := mocks.NewMockChunksMerger(t)
-	chunkCreatorMock := mocks.NewMockChunkCreator(t)
-	trackerMock := mocks.NewMockTracker(t)
-
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
-
-	chunkReader := mocks.NewMockReader(t)
-
-	ctx := context.Background()
-
-	chunkCreatorMock.On("Create", mock.Anything, inputMock, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-		args.Get(2).(chan<- model.Reader) <- chunkReader
-	})
-	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
-	chunksMergerMock.On("Merge", mock.Anything, mock.Anything).Return(mocks.NewMockReader(t), nil)
-
-	outputMock.On("Write", mock.Anything, mock.Anything).Return(assert.AnError)
-
-	err := orch.Sort(ctx, inputMock, outputMock, 0, 0)
-	require.Error(t, err)
 }
 
 func TestOrchestratorOutputCloseError(t *testing.T) {
@@ -273,7 +217,7 @@ func TestOrchestratorOutputCloseError(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	chunkReader := mocks.NewMockReader(t)
 
@@ -283,9 +227,8 @@ func TestOrchestratorOutputCloseError(t *testing.T) {
 		args.Get(2).(chan<- model.Reader) <- chunkReader
 	})
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
-	chunksMergerMock.On("Merge", mock.Anything, mock.Anything).Return(mocks.NewMockReader(t), nil)
+	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil)
 
-	outputMock.On("Write", mock.Anything, mock.Anything).Return(nil)
 	outputMock.On("Close").Return(assert.AnError)
 
 	err := orch.Sort(ctx, inputMock, outputMock, 0, 0)
@@ -303,7 +246,7 @@ func TestOrchestratorOutput(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	chunkReader := mocks.NewMockReader(t)
 
@@ -313,9 +256,8 @@ func TestOrchestratorOutput(t *testing.T) {
 		args.Get(2).(chan<- model.Reader) <- chunkReader
 	})
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
-	chunksMergerMock.On("Merge", mock.Anything, mock.Anything).Return(mocks.NewMockReader(t), nil)
+	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil)
 
-	outputMock.On("Write", mock.Anything, mock.Anything).Return(nil)
 	outputMock.On("Close").Return(nil)
 
 	err := orch.Sort(ctx, inputMock, outputMock, 0, 0)
@@ -333,7 +275,7 @@ func TestOrchestratorOutputNegativeMaxChunkSorter(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	chunkReader := mocks.NewMockReader(t)
 
@@ -343,9 +285,8 @@ func TestOrchestratorOutputNegativeMaxChunkSorter(t *testing.T) {
 		args.Get(2).(chan<- model.Reader) <- chunkReader
 	})
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
-	chunksMergerMock.On("Merge", mock.Anything, mock.Anything).Return(mocks.NewMockReader(t), nil)
+	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil)
 
-	outputMock.On("Write", mock.Anything, mock.Anything).Return(nil)
 	outputMock.On("Close").Return(nil)
 
 	err := orch.Sort(ctx, inputMock, outputMock, -1, 0)
@@ -363,7 +304,7 @@ func TestOrchestratorOutputNegativeMaxChunkMerger(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	chunkReader := mocks.NewMockReader(t)
 
@@ -373,9 +314,8 @@ func TestOrchestratorOutputNegativeMaxChunkMerger(t *testing.T) {
 		args.Get(2).(chan<- model.Reader) <- chunkReader
 	})
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
-	chunksMergerMock.On("Merge", mock.Anything, mock.Anything).Return(mocks.NewMockReader(t), nil)
+	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil)
 
-	outputMock.On("Write", mock.Anything, mock.Anything).Return(nil)
 	outputMock.On("Close").Return(nil)
 
 	err := orch.Sort(ctx, inputMock, outputMock, 0, -1)
@@ -393,7 +333,7 @@ func TestOrchestratorReadInputContextCancel(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	chunkReader := mocks.NewMockReader(t)
 
@@ -405,9 +345,7 @@ func TestOrchestratorReadInputContextCancel(t *testing.T) {
 	})
 
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
-	chunksMergerMock.On("Merge", mock.Anything, mock.Anything).Return(mocks.NewMockReader(t), nil).Maybe()
-
-	outputMock.On("Write", mock.Anything, mock.Anything).Return(nil).Maybe()
+	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil).Maybe()
 	outputMock.On("Close").Return(nil).Maybe()
 
 	err := orch.Sort(ctx, inputMock, outputMock, 0, -1)
@@ -425,7 +363,7 @@ func TestOrchestratorSortContextCancel(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 	chunkReader := mocks.NewMockReader(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -437,9 +375,7 @@ func TestOrchestratorSortContextCancel(t *testing.T) {
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil).Run(func(args mock.Arguments) {
 		cancel()
 	})
-	chunksMergerMock.On("Merge", mock.Anything).Return(mocks.NewMockReader(t), nil).Maybe()
-
-	outputMock.On("Write", mock.Anything, mock.Anything).Return(nil).Maybe()
+	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil).Maybe()
 	outputMock.On("Close").Return(nil).Maybe()
 
 	err := orch.Sort(ctx, inputMock, outputMock, 0, 0)
@@ -457,7 +393,7 @@ func TestOrchestratorOutputMaxChunkMerger3(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	chunkReader := mocks.NewMockReader(t)
 
@@ -469,9 +405,8 @@ func TestOrchestratorOutputMaxChunkMerger3(t *testing.T) {
 		args.Get(2).(chan<- model.Reader) <- chunkReader
 	})
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
-	chunksMergerMock.On("Merge", mock.Anything, mock.Anything).Return(mocks.NewMockReader(t), nil)
+	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil)
 
-	outputMock.On("Write", mock.Anything, mock.Anything).Return(nil)
 	outputMock.On("Close").Return(nil)
 
 	err := orch.Sort(ctx, inputMock, outputMock, 0, 3)
@@ -489,7 +424,7 @@ func TestOrchestratorOutputMaxChunkMerger2(t *testing.T) {
 	chunkCreatorMock := mocks.NewMockChunkCreator(t)
 	trackerMock := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock)
+	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
 
 	chunkReader := mocks.NewMockReader(t)
 
@@ -501,9 +436,8 @@ func TestOrchestratorOutputMaxChunkMerger2(t *testing.T) {
 		args.Get(2).(chan<- model.Reader) <- chunkReader
 	})
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
-	chunksMergerMock.On("Merge", mock.Anything, mock.Anything).Return(mocks.NewMockReader(t), nil)
+	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil)
 
-	outputMock.On("Write", mock.Anything, mock.Anything).Return(nil)
 	outputMock.On("Close").Return(nil)
 
 	err := orch.Sort(ctx, inputMock, outputMock, 0, 2)

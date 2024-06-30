@@ -19,16 +19,19 @@ type Orchestrator struct {
 	// Tracker is a tracker for chunks.
 	Tracker model.Tracker
 
+	createChunksSync bool
+
 	logger              model.Logger
 	defaultLoggerFields map[string]interface{}
 }
 
-func New(chunkCreator model.ChunkCreator, chunkSorter model.ChunkSorter, chunksMerger model.ChunksMerger, tracker model.Tracker) *Orchestrator {
+func New(chunkCreator model.ChunkCreator, chunkSorter model.ChunkSorter, chunksMerger model.ChunksMerger, tracker model.Tracker, createChunksSync bool) *Orchestrator {
 	return &Orchestrator{
-		ChunkSorter:  chunkSorter,
-		ChunksMerger: chunksMerger,
-		ChunkCreator: chunkCreator,
-		Tracker:      tracker,
+		ChunkSorter:      chunkSorter,
+		ChunksMerger:     chunksMerger,
+		ChunkCreator:     chunkCreator,
+		Tracker:          tracker,
+		createChunksSync: createChunksSync,
 	}
 }
 
@@ -92,7 +95,13 @@ func (o *Orchestrator) Sort(ctx context.Context, input model.Reader, output mode
 
 	chunksStep, err := pipeline.AddRootStep(pipe, "read input file", func(ctx context.Context, rootChan chan<- model.Reader) error {
 		o.debug("reading input file")
-		err = o.ChunkCreator.Create(ctx, input, rootChan)
+
+		fn := o.ChunkCreator.Create
+		if o.createChunksSync {
+			fn = o.ChunkCreator.SyncCreate
+		}
+
+		err = fn(ctx, input, rootChan)
 		if err != nil {
 			return fmt.Errorf("%s :%w", err.Error(), ErrFailedToCreateChunks)
 		}
@@ -169,28 +178,11 @@ func (o *Orchestrator) Sort(ctx context.Context, input model.Reader, output mode
 		return fmt.Errorf("failed to add step: %w", err)
 	}
 
-	mergedChunkStep, err := pipeline.AddStepOneToOne(pipe, "merge chunks", preparedSortedChunksStep, func(ctx context.Context, chunks []model.Reader) (model.Reader, error) {
+	err = pipeline.AddSink(pipe, "write output file", preparedSortedChunksStep, func(ctx context.Context, chunks []model.Reader) error {
 		o.debug("merging chunks")
-		mergedWr, err := o.ChunksMerger.Merge(ctx, chunks)
+		err := o.ChunksMerger.Merge(ctx, chunks, output)
 		if err != nil {
-			return nil, fmt.Errorf("%s %w", err.Error(), ErrFailedToMergeChunks)
-		}
-
-		if mergedWr == nil {
-			return nil, ErrNilChunk
-		}
-
-		return mergedWr, nil
-	})
-	if err != nil {
-		return fmt.Errorf("failed to add step: %w", err)
-	}
-
-	err = pipeline.AddSink(pipe, "write output file", mergedChunkStep, func(ctx context.Context, rdr model.Reader) error {
-		o.debug("writing output file")
-		err := output.Write(ctx, rdr)
-		if err != nil {
-			return fmt.Errorf("%s %w", err.Error(), ErrFailedToWriteOutput)
+			return fmt.Errorf("%s %w", err.Error(), ErrFailedToMergeChunks)
 		}
 
 		return nil

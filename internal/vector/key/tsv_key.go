@@ -7,7 +7,7 @@ import (
 
 const salt = "##!##"
 
-func AllocateTsv(row interface{}, pos ...int) (Key, error) {
+func AllocateCsv(row interface{}, pos ...int) (Key, error) {
 	splitted, ok := row.([]string)
 	if !ok {
 		return nil, fmt.Errorf("can't convert interface{} to []string: %+v", row)

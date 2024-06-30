@@ -32,8 +32,6 @@ func TestIntSlice(t *testing.T) {
 		{}, //chunk 2
 	}
 
-	chunkWritersMerger := &writer.IntSlice{}
-
 	chunkReaderFn := func(w model.Writer) model.Reader {
 		return &reader.IntSlice{Values: w.(*writer.IntSlice).Values}
 	}
@@ -58,10 +56,6 @@ func TestIntSlice(t *testing.T) {
 		return chunkWritersSorter[currCreatorSorter]
 	}
 
-	chunksWriterMerger := func() model.Writer {
-		return chunkWritersMerger
-	}
-
 	chunkCreator := chunkcreator.New(5, chunkReaderFn, chunkWriterCreatorFn)
 
 	intKeyFn := key.AllocateInt
@@ -69,11 +63,11 @@ func TestIntSlice(t *testing.T) {
 
 	chunkSorter := chunksorter.New(chunkWriterSorterrFn, chunkReaderFn, intKeyFn, vectorFn)
 
-	chunksMerger := chunksmerger.New(chunksWriterMerger, chunkReaderFn, intKeyFn, vectorFn, 2, false)
+	chunksMerger := chunksmerger.New(intKeyFn, vectorFn, 2, false)
 
 	tracker := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreator, chunkSorter, chunksMerger, tracker)
+	orch := orchestrator.New(chunkCreator, chunkSorter, chunksMerger, tracker, true)
 	orch.SetLogger(log)
 	chunkCreator.SetLogger(log)
 	chunkSorter.SetLogger(log)

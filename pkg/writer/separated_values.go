@@ -10,12 +10,14 @@ import (
 )
 
 type SeparatedValuesWriter struct {
-	w *csv.Writer
+	origWriter io.WriteCloser
+	w          *csv.Writer
 }
 
-func NewSeparatedValues(w io.Writer, separator rune) *SeparatedValuesWriter {
+func NewSeparatedValues(w io.WriteCloser, separator rune) *SeparatedValuesWriter {
 	s := &SeparatedValuesWriter{
-		w: csv.NewWriter(w),
+		origWriter: w,
+		w:          csv.NewWriter(w),
 	}
 	s.w.Comma = separator
 
@@ -56,6 +58,8 @@ func (w *SeparatedValuesWriter) Write(ctx context.Context, rdr model.Reader) err
 }
 
 func (s *SeparatedValuesWriter) Close() error {
+	defer s.origWriter.Close()
+
 	s.w.Flush()
 
 	if s.w.Error() != nil {

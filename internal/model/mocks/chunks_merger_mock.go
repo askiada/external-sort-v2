@@ -14,34 +14,22 @@ type MockChunksMerger struct {
 	mock.Mock
 }
 
-// Merge provides a mock function with given fields: ctx, chunks
-func (_m *MockChunksMerger) Merge(ctx context.Context, chunks []model.Reader) (model.Reader, error) {
-	ret := _m.Called(ctx, chunks)
+// Merge provides a mock function with given fields: ctx, chunks, outputWriter
+func (_m *MockChunksMerger) Merge(ctx context.Context, chunks []model.Reader, outputWriter model.Writer) error {
+	ret := _m.Called(ctx, chunks, outputWriter)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Merge")
 	}
 
-	var r0 model.Reader
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, []model.Reader) (model.Reader, error)); ok {
-		return rf(ctx, chunks)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, []model.Reader) model.Reader); ok {
-		r0 = rf(ctx, chunks)
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, []model.Reader, model.Writer) error); ok {
+		r0 = rf(ctx, chunks, outputWriter)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(model.Reader)
-		}
+		r0 = ret.Error(0)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, []model.Reader) error); ok {
-		r1 = rf(ctx, chunks)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // NewMockChunksMerger creates a new instance of MockChunksMerger. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

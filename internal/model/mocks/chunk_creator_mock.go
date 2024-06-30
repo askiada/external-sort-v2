@@ -32,6 +32,24 @@ func (_m *MockChunkCreator) Create(ctx context.Context, input model.Reader, chun
 	return r0
 }
 
+// SyncCreate provides a mock function with given fields: ctx, input, chunks
+func (_m *MockChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chunks chan<- model.Reader) error {
+	ret := _m.Called(ctx, input, chunks)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SyncCreate")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, model.Reader, chan<- model.Reader) error); ok {
+		r0 = rf(ctx, input, chunks)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // NewMockChunkCreator creates a new instance of MockChunkCreator. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockChunkCreator(t interface {

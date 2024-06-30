@@ -25,16 +25,16 @@ import (
 )
 
 func TestCSV3(t *testing.T) {
-	/*t.Cleanup(func() {
+	t.Cleanup(func() {
 		os.RemoveAll("testdata/chunks")
 		os.Mkdir("testdata/chunks", os.ModePerm)
 
 		os.Remove("testdata/output.csv")
 		os.Remove("testdata/output_tmp.csv")
-	})*/
+	})
 
 	log := logger.NewLogrus()
-	log.SetLevel("warn")
+	log.SetLevel("trace")
 
 	inputFile, err := os.Open("testdata/input.csv")
 	require.NoError(t, err)
@@ -53,7 +53,9 @@ func TestCSV3(t *testing.T) {
 		defer m.Unlock()
 		defer func() { currChunkCreatorReader++ }()
 
-		chunkCSVReader := csv.NewReader(inputOffsets[currChunkCreatorReader])
+		pr := inputOffsets[currChunkCreatorReader]
+
+		chunkCSVReader := csv.NewReader(pr)
 
 		return reader.NewSeparatedValues(chunkCSVReader, ',')
 	}
@@ -97,28 +99,10 @@ func TestCSV3(t *testing.T) {
 		return writer.NewSeparatedValues(chunkFileWriter, ',')
 	}
 
-	chunkMergerReaderFn := func(w model.Writer) model.Reader {
-		m.Lock()
-		defer m.Unlock()
-
-		chunkFile, err := os.Open("testdata/output_tmp.csv")
-		require.NoError(t, err)
-
-		chunkCSVReader := csv.NewReader(chunkFile)
-
-		return reader.NewSeparatedValues(chunkCSVReader, ',')
-	}
-
-	chunksWriterMerger := func() model.Writer {
-		outputFile, err := os.OpenFile("testdata/output_tmp.csv", os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
-		require.NoError(t, err)
-		return writer.NewSeparatedValues(outputFile, ',')
-	}
-
 	chunkCreator := chunkcreator.New(5, chunkCreatorReaderFn, chunkWriterCreatorFn)
 
 	tsvKeyFn := func(row interface{}) (key.Key, error) {
-		tKey, err := key.AllocateTsv(row, 1)
+		tKey, err := key.AllocateCsv(row, 1)
 		if err != nil {
 			return tKey, err
 		}
@@ -130,11 +114,11 @@ func TestCSV3(t *testing.T) {
 
 	chunkSorter := chunksorter.New(chunkWriterSorterrFn, chunkSorterReaderFn, tsvKeyFn, vectorFn)
 
-	chunksMerger := chunksmerger.New(chunksWriterMerger, chunkMergerReaderFn, tsvKeyFn, vectorFn, 2, false)
+	chunksMerger := chunksmerger.New(tsvKeyFn, vectorFn, 2, false)
 
 	tracker := mocks.NewMockTracker(t)
 
-	orch := orchestrator.New(chunkCreator, chunkSorter, chunksMerger, tracker)
+	orch := orchestrator.New(chunkCreator, chunkSorter, chunksMerger, tracker, false)
 
 	orch.SetLogger(log)
 	chunkCreator.SetLogger(log)
@@ -142,6 +126,7 @@ func TestCSV3(t *testing.T) {
 	chunksMerger.SetLogger(log)
 
 	outputFile, err := os.OpenFile("testdata/output.csv", os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
+	require.NoError(t, err)
 	outputWriter := writer.NewSeparatedValues(outputFile, ',')
 
 	err = orch.Sort(context.Background(), inputReader, outputWriter, 3, 3)

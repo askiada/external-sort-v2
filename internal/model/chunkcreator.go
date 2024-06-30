@@ -8,4 +8,5 @@ import "context"
 type ChunkCreator interface {
 	// Create creates chunks.
 	Create(ctx context.Context, input Reader, chunks chan<- Reader) error
+	SyncCreate(ctx context.Context, input Reader, chunks chan<- Reader) error
 }
