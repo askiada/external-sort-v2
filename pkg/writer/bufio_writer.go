@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 
-	"github.com/askiada/external-sort-v2/internal/model"
+	"github.com/askiada/external-sort-v2/pkg/model"
 	"github.com/pkg/errors"
 )
 

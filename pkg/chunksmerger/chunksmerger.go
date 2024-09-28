@@ -4,15 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/askiada/external-sort-v2/internal/model"
 	"github.com/askiada/external-sort-v2/internal/vector"
-	"github.com/askiada/external-sort-v2/internal/vector/key"
+	"github.com/askiada/external-sort-v2/pkg/model"
 	"github.com/pkg/errors"
 )
 
 type ChunksMerger struct {
 	chunkBufferSize int
-	keyFn           key.AllocateKeyFn
+	keyFn           model.AllocateKeyFn
 	vectorFn        vector.AllocateVectorFnfunc
 	dropDuplicates  bool
 
@@ -21,7 +20,7 @@ type ChunksMerger struct {
 }
 
 func New(
-	keyFn key.AllocateKeyFn,
+	keyFn model.AllocateKeyFn,
 	vectorFn vector.AllocateVectorFnfunc,
 	chunkBufferSize int,
 	dropDuplicates bool,

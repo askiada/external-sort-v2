@@ -11,13 +11,13 @@ import (
 	"testing"
 
 	"github.com/askiada/external-sort-v2/internal/logger"
-	"github.com/askiada/external-sort-v2/internal/model"
-	"github.com/askiada/external-sort-v2/internal/model/mocks"
 	"github.com/askiada/external-sort-v2/internal/vector"
-	"github.com/askiada/external-sort-v2/internal/vector/key"
 	"github.com/askiada/external-sort-v2/pkg/chunkcreator"
 	"github.com/askiada/external-sort-v2/pkg/chunksmerger"
 	"github.com/askiada/external-sort-v2/pkg/chunksorter"
+	"github.com/askiada/external-sort-v2/pkg/key"
+	"github.com/askiada/external-sort-v2/pkg/model"
+	"github.com/askiada/external-sort-v2/pkg/model/mocks"
 	"github.com/askiada/external-sort-v2/pkg/orchestrator"
 	"github.com/askiada/external-sort-v2/pkg/reader"
 	"github.com/askiada/external-sort-v2/pkg/writer"
@@ -48,7 +48,7 @@ func TestCSV3(t *testing.T) {
 
 	inputOffsets := []*io.PipeReader{}
 
-	chunkCreatorReaderFn := func(w model.Writer) model.Reader {
+	chunkCreatorReaderFn := func(w model.Writer) (model.Reader, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currChunkCreatorReader++ }()
@@ -57,12 +57,12 @@ func TestCSV3(t *testing.T) {
 
 		chunkCSVReader := csv.NewReader(pr)
 
-		return reader.NewSeparatedValues(chunkCSVReader, ',')
+		return reader.NewSeparatedValues(chunkCSVReader, ','), nil
 	}
 
 	currCreatorWriter := 0
 
-	chunkWriterCreatorFn := func() model.Writer {
+	chunkWriterCreatorFn := func() (model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currCreatorWriter++ }()
@@ -70,11 +70,11 @@ func TestCSV3(t *testing.T) {
 		pr, pw := io.Pipe()
 
 		inputOffsets = append(inputOffsets, pr)
-		return writer.NewSeparatedValues(pw, ',')
+		return writer.NewSeparatedValues(pw, ','), nil
 	}
 
 	currChunkSorterReader := 0
-	chunkSorterReaderFn := func(w model.Writer) model.Reader {
+	chunkSorterReaderFn := func(w model.Writer) (model.Reader, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currChunkSorterReader++ }()
@@ -84,24 +84,24 @@ func TestCSV3(t *testing.T) {
 
 		chunkCSVReader := csv.NewReader(chunkFile)
 
-		return reader.NewSeparatedValues(chunkCSVReader, ',')
+		return reader.NewSeparatedValues(chunkCSVReader, ','), nil
 	}
 
 	currCreatorSorter := 0
 
-	chunkWriterSorterrFn := func() model.Writer {
+	chunkWriterSorterrFn := func() (model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currCreatorSorter++ }()
 		chunkFileWriter, err := os.OpenFile(fmt.Sprintf("testdata/chunks/chunk_sorted_%d.csv", currCreatorSorter), os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
 		require.NoError(t, err)
 
-		return writer.NewSeparatedValues(chunkFileWriter, ',')
+		return writer.NewSeparatedValues(chunkFileWriter, ','), nil
 	}
 
 	chunkCreator := chunkcreator.New(5, chunkCreatorReaderFn, chunkWriterCreatorFn)
 
-	tsvKeyFn := func(row interface{}) (key.Key, error) {
+	tsvKeyFn := func(row interface{}) (model.Key, error) {
 		tKey, err := key.AllocateCsv(row, 1)
 		if err != nil {
 			return tKey, err

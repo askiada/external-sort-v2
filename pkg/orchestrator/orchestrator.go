@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/askiada/external-sort-v2/internal/model"
+	"github.com/askiada/external-sort-v2/pkg/model"
 	"github.com/askiada/go-pipeline/pkg/pipeline"
 )
 

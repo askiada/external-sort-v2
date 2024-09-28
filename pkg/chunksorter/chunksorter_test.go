@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/askiada/external-sort-v2/internal/model"
-	"github.com/askiada/external-sort-v2/internal/model/mocks"
 	"github.com/askiada/external-sort-v2/internal/vector"
-	keymocks "github.com/askiada/external-sort-v2/internal/vector/key/mocks"
 	vectormocks "github.com/askiada/external-sort-v2/internal/vector/mocks"
 	"github.com/askiada/external-sort-v2/pkg/chunksorter"
+	"github.com/askiada/external-sort-v2/pkg/model"
+	"github.com/askiada/external-sort-v2/pkg/model/mocks"
+	keymocks "github.com/askiada/external-sort-v2/pkg/model/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -65,8 +65,8 @@ func TestChunkSorter_Sort(t *testing.T) {
 
 	// Create the ChunkSorter instance
 	sorter := chunksorter.New(
-		func() model.Writer { return mockWriter },
-		func(model.Writer) model.Reader { return mocks.NewMockReader(t) },
+		func() (model.Writer, error) { return mockWriter, nil },
+		func(model.Writer) (model.Reader, error) { return mocks.NewMockReader(t), nil },
 		mockAllocateKeyFn.Execute,
 		mockAllocateVectorFnfunc.Execute,
 	)

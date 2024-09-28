@@ -3,19 +3,19 @@ package vector
 import (
 	"sort"
 
-	"github.com/askiada/external-sort-v2/internal/vector/key"
+	"github.com/askiada/external-sort-v2/pkg/model"
 )
 
 var _ Vector = &SliceVec{}
 
-func AllocateSlice(allocateKey func(row interface{}) (key.Key, error)) Vector {
+func AllocateSlice(allocateKey func(row interface{}) (model.Key, error)) Vector {
 	return &SliceVec{
 		allocateKey: allocateKey,
 	}
 }
 
 type SliceVec struct {
-	allocateKey func(row interface{}) (key.Key, error)
+	allocateKey func(row interface{}) (model.Key, error)
 	s           []*Element
 }
 

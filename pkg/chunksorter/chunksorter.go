@@ -4,26 +4,25 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/askiada/external-sort-v2/internal/model"
 	"github.com/askiada/external-sort-v2/internal/vector"
-	"github.com/askiada/external-sort-v2/internal/vector/key"
+	"github.com/askiada/external-sort-v2/pkg/model"
 )
 
 // ChunkSorter is a sorter for chunks.
 type ChunkSorter struct {
-	keyFn         key.AllocateKeyFn
+	keyFn         model.AllocateKeyFn
 	vectorFn      vector.AllocateVectorFnfunc
-	chunkWriterFn func() model.Writer
-	chunkReaderFn func(model.Writer) model.Reader
+	chunkWriterFn func() (model.Writer, error)
+	chunkReaderFn func(model.Writer) (model.Reader, error)
 
 	logger              model.Logger
 	defaultLoggerFields map[string]interface{}
 }
 
 func New(
-	chunkWriterFn func() model.Writer,
-	chunkReaderFn func(model.Writer) model.Reader,
-	keyFn key.AllocateKeyFn,
+	chunkWriterFn func() (model.Writer, error),
+	chunkReaderFn func(model.Writer) (model.Reader, error),
+	keyFn model.AllocateKeyFn,
 	vectroFn vector.AllocateVectorFnfunc,
 ) *ChunkSorter {
 	return &ChunkSorter{
@@ -109,7 +108,11 @@ outer:
 	buffer.Sort()
 
 	c.trace("creating chunk writer")
-	wr := c.chunkWriterFn()
+	wr, err := c.chunkWriterFn()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create chunk writer: %w", err)
+	}
+
 	defer wr.Close()
 
 	c.trace("writing rows")
@@ -130,7 +133,10 @@ outer:
 	buffer.Reset()
 
 	c.trace("creating chunk reader")
-	chunkRdr := c.chunkReaderFn(wr)
+	chunkRdr, err := c.chunkReaderFn(wr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create chunk reader: %w", err)
+	}
 
 	return chunkRdr, nil
 }

@@ -1,9 +1,9 @@
 package vector
 
-import "github.com/askiada/external-sort-v2/internal/vector/key"
+import "github.com/askiada/external-sort-v2/pkg/model"
 
 type Element struct {
-	Key key.Key
+	Key model.Key
 	Row interface{}
 }
 

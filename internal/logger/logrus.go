@@ -3,9 +3,8 @@ package logger
 import (
 	"os"
 
+	"github.com/askiada/external-sort-v2/pkg/model"
 	"github.com/sirupsen/logrus"
-
-	"github.com/askiada/external-sort-v2/internal/model"
 )
 
 type logrusLogger struct {

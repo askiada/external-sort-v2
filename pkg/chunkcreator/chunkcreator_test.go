@@ -5,9 +5,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/askiada/external-sort-v2/internal/model"
-	"github.com/askiada/external-sort-v2/internal/model/mocks"
 	"github.com/askiada/external-sort-v2/pkg/chunkcreator"
+	"github.com/askiada/external-sort-v2/pkg/model"
+	"github.com/askiada/external-sort-v2/pkg/model/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -32,7 +32,14 @@ func TestCreate(t *testing.T) {
 	// mockWriter.On("Close").Return(nil).Once()
 
 	// Create the ChunkCreator with the mock functions
-	cc := chunkcreator.New(10, func(model.Writer) model.Reader { return mocks.NewMockReader(t) }, func() model.Writer { return mockWriter })
+	cc := chunkcreator.New(
+		10,
+		func(model.Writer) (model.Reader, error) {
+			return mocks.NewMockReader(t), nil
+		},
+		func() (model.Writer, error) {
+			return mockWriter, nil
+		})
 	chunkChan := make(chan model.Reader)
 
 	wg := sync.WaitGroup{}
@@ -80,7 +87,14 @@ func TestCreate2chunks(t *testing.T) {
 	mockWriter.On("Close").Return(nil).Once()
 
 	// Create the ChunkCreator with the mock functions
-	cc := chunkcreator.New(1, func(model.Writer) model.Reader { return mocks.NewMockReader(t) }, func() model.Writer { return mockWriter })
+	cc := chunkcreator.New(
+		1,
+		func(model.Writer) (model.Reader, error) {
+			return mocks.NewMockReader(t), nil
+		},
+		func() (model.Writer, error) {
+			return mockWriter, nil
+		})
 
 	chunkChan := make(chan model.Reader)
 
@@ -137,7 +151,14 @@ func TestCreate2chunksV2(t *testing.T) {
 	// mockWriter.On("Close").Return(nil).Once()
 
 	// Create the ChunkCreator with the mock functions
-	cc := chunkcreator.New(2, func(model.Writer) model.Reader { return mocks.NewMockReader(t) }, func() model.Writer { return mockWriter })
+	cc := chunkcreator.New(
+		2,
+		func(model.Writer) (model.Reader, error) {
+			return mocks.NewMockReader(t), nil
+		},
+		func() (model.Writer, error) {
+			return mockWriter, nil
+		})
 
 	chunkChan := make(chan model.Reader)
 

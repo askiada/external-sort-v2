@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/askiada/external-sort-v2/internal/model"
-	"github.com/askiada/external-sort-v2/internal/model/mocks"
+	"github.com/askiada/external-sort-v2/pkg/model"
+	"github.com/askiada/external-sort-v2/pkg/model/mocks"
 	"github.com/askiada/external-sort-v2/pkg/orchestrator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

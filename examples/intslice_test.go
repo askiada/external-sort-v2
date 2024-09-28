@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/askiada/external-sort-v2/internal/logger"
-	"github.com/askiada/external-sort-v2/internal/model"
-	"github.com/askiada/external-sort-v2/internal/model/mocks"
 	"github.com/askiada/external-sort-v2/internal/vector"
-	"github.com/askiada/external-sort-v2/internal/vector/key"
 	"github.com/askiada/external-sort-v2/pkg/chunkcreator"
 	"github.com/askiada/external-sort-v2/pkg/chunksmerger"
 	"github.com/askiada/external-sort-v2/pkg/chunksorter"
+	"github.com/askiada/external-sort-v2/pkg/key"
+	"github.com/askiada/external-sort-v2/pkg/model"
+	"github.com/askiada/external-sort-v2/pkg/model/mocks"
 	"github.com/askiada/external-sort-v2/pkg/orchestrator"
 	"github.com/askiada/external-sort-v2/pkg/reader"
 	"github.com/askiada/external-sort-v2/pkg/writer"
@@ -32,28 +32,28 @@ func TestIntSlice(t *testing.T) {
 		{}, //chunk 2
 	}
 
-	chunkReaderFn := func(w model.Writer) model.Reader {
-		return &reader.IntSlice{Values: w.(*writer.IntSlice).Values}
+	chunkReaderFn := func(w model.Writer) (model.Reader, error) {
+		return &reader.IntSlice{Values: w.(*writer.IntSlice).Values}, nil
 	}
 
 	currCreatorWriter := 0
 
 	m := sync.Mutex{}
 
-	chunkWriterCreatorFn := func() model.Writer {
+	chunkWriterCreatorFn := func() (model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currCreatorWriter++ }()
-		return chunkWritersCreator[currCreatorWriter]
+		return chunkWritersCreator[currCreatorWriter], nil
 	}
 
 	currCreatorSorter := 0
 
-	chunkWriterSorterrFn := func() model.Writer {
+	chunkWriterSorterrFn := func() (model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currCreatorSorter++ }()
-		return chunkWritersSorter[currCreatorSorter]
+		return chunkWritersSorter[currCreatorSorter], nil
 	}
 
 	chunkCreator := chunkcreator.New(5, chunkReaderFn, chunkWriterCreatorFn)

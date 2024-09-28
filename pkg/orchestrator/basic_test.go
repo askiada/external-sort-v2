@@ -10,8 +10,9 @@ import (
 	"testing"
 
 	"github.com/askiada/external-sort-v2/internal/logger"
-	"github.com/askiada/external-sort-v2/internal/model"
-	"github.com/askiada/external-sort-v2/internal/vector/key"
+
+	"github.com/askiada/external-sort-v2/pkg/key"
+	"github.com/askiada/external-sort-v2/pkg/model"
 	"github.com/askiada/external-sort-v2/pkg/orchestrator"
 	"github.com/askiada/external-sort-v2/pkg/reader"
 	"github.com/askiada/external-sort-v2/pkg/writer"
@@ -30,31 +31,35 @@ func TestBasicOrchestrator(t *testing.T) {
 	log := logger.NewLogrus()
 	log.SetLevel("trace")
 
-	creatorRdrFn := func(rdr io.Reader) model.Reader {
+	creatorRdrFn := func(rdr io.Reader) (model.Reader, error) {
 		chunkCSVReader := csv.NewReader(rdr)
 
-		return reader.NewSeparatedValues(chunkCSVReader, ',')
+		return reader.NewSeparatedValues(chunkCSVReader, ','), nil
 	}
 
-	creatorWrFn := func(wr io.WriteCloser) model.Writer {
-		return writer.NewSeparatedValues(wr, ',')
+	creatorWrFn := func(wr io.WriteCloser) (model.Writer, error) {
+		return writer.NewSeparatedValues(wr, ','), nil
 	}
 
-	chunkRdrFn := func(idx int) io.Reader {
+	chunkRdrFn := func(idx int) (io.Reader, error) {
 		chunkFile, err := os.Open(fmt.Sprintf("testdata/chunks/chunk_sorted_%d.csv", idx))
-		require.NoError(t, err)
+		if err != nil {
+			return nil, err
+		}
 
-		return chunkFile
+		return chunkFile, nil
 	}
 
-	chunkWrFn := func(idx int) io.WriteCloser {
+	chunkWrFn := func(idx int) (io.WriteCloser, error) {
 		chunkFileWriter, err := os.OpenFile(fmt.Sprintf("testdata/chunks/chunk_sorted_%d.csv", idx), os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
-		require.NoError(t, err)
+		if err != nil {
+			return nil, err
+		}
 
-		return chunkFileWriter
+		return chunkFileWriter, nil
 	}
 
-	tsvKeyFn := func(row interface{}) (key.Key, error) {
+	tsvKeyFn := func(row interface{}) (model.Key, error) {
 		tKey, err := key.AllocateCsv(row, 1)
 		if err != nil {
 			return tKey, err

@@ -1,4 +1,4 @@
-package key
+package model
 
 // Key define the interface to compare keys to sort.
 //

@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/askiada/external-sort-v2/internal/model"
+	"github.com/askiada/external-sort-v2/pkg/model"
 )
 
 type IntSlice struct {

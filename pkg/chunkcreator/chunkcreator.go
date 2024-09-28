@@ -4,19 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/askiada/external-sort-v2/internal/model"
+	"github.com/askiada/external-sort-v2/pkg/model"
 )
 
 type ChunkCreator struct {
 	// chunkSize is a size of a chunk.
 	chunkSize           int
-	chunkWriterFn       func() model.Writer
-	chunkReaderFn       func(model.Writer) model.Reader
+	chunkWriterFn       func() (model.Writer, error)
+	chunkReaderFn       func(model.Writer) (model.Reader, error)
 	logger              model.Logger
 	defaultLoggerFields map[string]interface{}
 }
 
-func New(chunkSize int, chunkReaderFn func(model.Writer) model.Reader, chunkWriterFn func() model.Writer) *ChunkCreator {
+func New(chunkSize int, chunkReaderFn func(model.Writer) (model.Reader, error), chunkWriterFn func() (model.Writer, error)) *ChunkCreator {
 	return &ChunkCreator{
 		chunkSize:     chunkSize,
 		chunkWriterFn: chunkWriterFn,
@@ -34,12 +34,20 @@ func (cc *ChunkCreator) SetLogger(logger model.Logger) {
 
 func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks chan<- model.Reader) error {
 	currCount := 0
-	currChunk := cc.chunkWriterFn()
+	currChunk, err := cc.chunkWriterFn()
+	if err != nil {
+		return fmt.Errorf("failed to create chunk: %w", err)
+	}
+
+	chunk, err := cc.chunkReaderFn(currChunk)
+	if err != nil {
+		return fmt.Errorf("failed to create chunk: %w", err)
+	}
 
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case chunks <- cc.chunkReaderFn(currChunk):
+	case chunks <- chunk:
 	}
 
 	for {
@@ -60,12 +68,20 @@ func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks c
 				break
 			}
 
-			currChunk = cc.chunkWriterFn()
+			currChunk, err = cc.chunkWriterFn()
+			if err != nil {
+				return fmt.Errorf("failed to create chunk: %w", err)
+			}
+
+			currChunkRdr, err := cc.chunkReaderFn(currChunk)
+			if err != nil {
+				return fmt.Errorf("failed to create chunk: %w", err)
+			}
 
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case chunks <- cc.chunkReaderFn(currChunk):
+			case chunks <- currChunkRdr:
 				cc.trace("added chunk to chunkWriters")
 			}
 		}
@@ -95,7 +111,11 @@ func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks c
 
 func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chunks chan<- model.Reader) error {
 	currCount := 0
-	currChunk := cc.chunkWriterFn()
+	currChunk, err := cc.chunkWriterFn()
+	if err != nil {
+		return fmt.Errorf("failed to create chunk: %w", err)
+	}
+
 	for {
 		foundNew := input.Next()
 
@@ -108,17 +128,25 @@ func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chun
 				return fmt.Errorf("failed to close chunk: %w", err)
 			}
 
+			currrChunkRdr, err := cc.chunkReaderFn(currChunk)
+			if err != nil {
+				return fmt.Errorf("failed to create chunk: %w", err)
+			}
+
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case chunks <- cc.chunkReaderFn(currChunk):
+			case chunks <- currrChunkRdr:
 				cc.trace("added chunk to chunkWriters")
 				if !foundNew {
 					break
 				}
 
 				cc.trace("creating new chunk")
-				currChunk = cc.chunkWriterFn()
+				currChunk, err = cc.chunkWriterFn()
+				if err != nil {
+					return fmt.Errorf("failed to create chunk: %w", err)
+				}
 			}
 		}
 
