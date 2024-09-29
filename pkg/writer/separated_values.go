@@ -3,6 +3,7 @@ package writer
 import (
 	"context"
 	"encoding/csv"
+	"fmt"
 	"io"
 
 	"github.com/askiada/external-sort-v2/pkg/model"
@@ -12,16 +13,32 @@ import (
 type SeparatedValuesWriter struct {
 	origWriter io.WriteCloser
 	w          *csv.Writer
+	headers    [][]string
 }
 
-func NewSeparatedValues(w io.WriteCloser, separator rune) *SeparatedValuesWriter {
+func NewSeparatedValues(w io.WriteCloser, separator rune, opts ...SeparatedValuesWriterOption) (*SeparatedValuesWriter, error) {
 	s := &SeparatedValuesWriter{
 		origWriter: w,
 		w:          csv.NewWriter(w),
 	}
 	s.w.Comma = separator
 
-	return s
+	for _, opt := range opts {
+		err := opt(s)
+		if err != nil {
+			return nil, fmt.Errorf("can't apply option: %w", err)
+		}
+	}
+
+	for _, row := range s.headers {
+		err := s.w.Write(row)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't write headers")
+		}
+
+	}
+
+	return s, nil
 }
 
 func (s *SeparatedValuesWriter) WriteRow(ctx context.Context, elem interface{}) error {
@@ -40,7 +57,7 @@ func (s *SeparatedValuesWriter) WriteRow(ctx context.Context, elem interface{}) 
 
 func (w *SeparatedValuesWriter) Write(ctx context.Context, rdr model.Reader) error {
 	for rdr.Next() {
-		val, err := rdr.Read()
+		val, _, err := rdr.Read()
 		if err != nil {
 			return err
 		}
@@ -70,3 +87,12 @@ func (s *SeparatedValuesWriter) Close() error {
 }
 
 var _ model.Writer = &SeparatedValuesWriter{}
+
+type SeparatedValuesWriterOption func(*SeparatedValuesWriter) error
+
+func WithSeparatedValuesHeaders(headers [][]string) SeparatedValuesWriterOption {
+	return func(s *SeparatedValuesWriter) error {
+		s.headers = headers
+		return nil
+	}
+}

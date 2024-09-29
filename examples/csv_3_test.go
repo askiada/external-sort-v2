@@ -41,7 +41,8 @@ func TestCSV3(t *testing.T) {
 
 	inputCSVReader := csv.NewReader(inputFile)
 
-	inputReader := reader.NewSeparatedValues(inputCSVReader, ',')
+	inputReader, err := reader.NewSeparatedValues(inputCSVReader, ',')
+	require.NoError(t, err)
 
 	currChunkCreatorReader := 0
 	m := sync.Mutex{}
@@ -57,7 +58,7 @@ func TestCSV3(t *testing.T) {
 
 		chunkCSVReader := csv.NewReader(pr)
 
-		return reader.NewSeparatedValues(chunkCSVReader, ','), nil
+		return reader.NewSeparatedValues(chunkCSVReader, ',')
 	}
 
 	currCreatorWriter := 0
@@ -70,7 +71,7 @@ func TestCSV3(t *testing.T) {
 		pr, pw := io.Pipe()
 
 		inputOffsets = append(inputOffsets, pr)
-		return writer.NewSeparatedValues(pw, ','), nil
+		return writer.NewSeparatedValues(pw, ',')
 	}
 
 	currChunkSorterReader := 0
@@ -84,7 +85,7 @@ func TestCSV3(t *testing.T) {
 
 		chunkCSVReader := csv.NewReader(chunkFile)
 
-		return reader.NewSeparatedValues(chunkCSVReader, ','), nil
+		return reader.NewSeparatedValues(chunkCSVReader, ',')
 	}
 
 	currCreatorSorter := 0
@@ -96,7 +97,7 @@ func TestCSV3(t *testing.T) {
 		chunkFileWriter, err := os.OpenFile(fmt.Sprintf("testdata/chunks/chunk_sorted_%d.csv", currCreatorSorter), os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
 		require.NoError(t, err)
 
-		return writer.NewSeparatedValues(chunkFileWriter, ','), nil
+		return writer.NewSeparatedValues(chunkFileWriter, ',')
 	}
 
 	chunkCreator := chunkcreator.New(5, chunkCreatorReaderFn, chunkWriterCreatorFn)
@@ -127,7 +128,8 @@ func TestCSV3(t *testing.T) {
 
 	outputFile, err := os.OpenFile("testdata/output.csv", os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
 	require.NoError(t, err)
-	outputWriter := writer.NewSeparatedValues(outputFile, ',')
+	outputWriter, err := writer.NewSeparatedValues(outputFile, ',')
+	require.NoError(t, err)
 
 	err = orch.Sort(context.Background(), inputReader, outputWriter, 3, 3)
 	require.NoError(t, err)

@@ -10,7 +10,7 @@ import (
 )
 
 type ChunksMerger struct {
-	chunkBufferSize int
+	chunkBufferSize int64
 	keyFn           model.AllocateKeyFn
 	vectorFn        vector.AllocateVectorFnfunc
 	dropDuplicates  bool
@@ -22,7 +22,7 @@ type ChunksMerger struct {
 func New(
 	keyFn model.AllocateKeyFn,
 	vectorFn vector.AllocateVectorFnfunc,
-	chunkBufferSize int,
+	chunkBufferSize int64,
 	dropDuplicates bool,
 ) *ChunksMerger {
 	return &ChunksMerger{
@@ -42,7 +42,10 @@ func (c *ChunksMerger) SetLogger(logger model.Logger) {
 }
 
 func (c *ChunksMerger) Merge(ctx context.Context, chunks []model.Reader, outputWriter model.Writer) (err error) {
-	defer outputWriter.Close()
+	defer func() {
+		c.trace("closing output writer after merge")
+		outputWriter.Close()
+	}()
 	c.trace("creating output buffer")
 	outputBuffer := c.vectorFn(c.keyFn)
 
@@ -65,7 +68,7 @@ func (c *ChunksMerger) Merge(ctx context.Context, chunks []model.Reader, outputW
 
 	for {
 
-		if chunkInfos.len() == 0 || outputBuffer.Len() == c.chunkBufferSize {
+		if chunkInfos.len() == 0 || outputBuffer.Size() >= c.chunkBufferSize {
 			c.trace("writing buffer")
 			err := c.writeBuffer(ctx, outputWriter, outputBuffer)
 			if err != nil {
@@ -106,13 +109,13 @@ var (
 	}
 )
 
-func (c *ChunksMerger) updateChunks(createdChunks *chunkInfos, minChunk *chunkInfo, minIdx, k int) error {
+func (c *ChunksMerger) updateChunks(createdChunks *chunkInfos, minChunk *chunkInfo, minIdx int, k int64) error {
 	c.withFieldsTracef(updateChunksLoggerFields, "front shifting buffer of chunk %d", minIdx)
 	minChunk.buffer.FrontShift()
 
 	isEmpty := false
 
-	if minChunk.buffer.Len() == 0 {
+	if minChunk.buffer.Size() == 0 {
 		c.withFieldsTracef(updateChunksLoggerFields, "pulling subset from chunk %d", minIdx)
 		err := minChunk.pullSubset(k)
 		if err != nil {
@@ -120,7 +123,7 @@ func (c *ChunksMerger) updateChunks(createdChunks *chunkInfos, minChunk *chunkIn
 		}
 
 		// if after pulling data the chunk buffer is still empty then we can remove it
-		if minChunk.buffer.Len() == 0 {
+		if minChunk.buffer.Size() == 0 {
 			isEmpty = true
 
 			c.withFieldsTracef(updateChunksLoggerFields, "removing chunk at index %d", minIdx)
@@ -168,7 +171,7 @@ type nextChunk struct {
 func (nc *nextChunk) get(output vector.Vector, createdChunks *chunkInfos, dropDuplicates bool) (*chunkInfo, int, error) {
 	minChunk, minValue, minIdx := createdChunks.min()
 	if (!dropDuplicates || nc.oldElem == nil) || (dropDuplicates && !minValue.Key.Equal(nc.oldElem.Key)) {
-		err := output.PushBack(minValue.Row)
+		err := output.PushBack(minValue.Row, minValue.Size)
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "can't push back row %+v", minValue.Row)
 		}

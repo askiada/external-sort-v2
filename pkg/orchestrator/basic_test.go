@@ -34,11 +34,11 @@ func TestBasicOrchestrator(t *testing.T) {
 	creatorRdrFn := func(rdr io.Reader) (model.Reader, error) {
 		chunkCSVReader := csv.NewReader(rdr)
 
-		return reader.NewSeparatedValues(chunkCSVReader, ','), nil
+		return reader.NewSeparatedValues(chunkCSVReader, ',')
 	}
 
 	creatorWrFn := func(wr io.WriteCloser) (model.Writer, error) {
-		return writer.NewSeparatedValues(wr, ','), nil
+		return writer.NewSeparatedValues(wr, ',')
 	}
 
 	chunkRdrFn := func(idx int) (io.Reader, error) {
@@ -68,7 +68,7 @@ func TestBasicOrchestrator(t *testing.T) {
 		return key.AllocateInt(tKey.Value())
 	}
 
-	orch := orchestrator.NewBasic(creatorRdrFn, creatorWrFn, chunkRdrFn, chunkWrFn, tsvKeyFn, 5, 5, false)
+	orch := orchestrator.NewBasic(creatorRdrFn, creatorWrFn, chunkRdrFn, chunkWrFn, tsvKeyFn, 5, false)
 
 	orch.SetLogger(log)
 	ctx := context.Background()
@@ -77,13 +77,15 @@ func TestBasicOrchestrator(t *testing.T) {
 
 	inputCSVReader := csv.NewReader(inputFile)
 
-	inputReader := reader.NewSeparatedValues(inputCSVReader, ',')
+	inputReader, err := reader.NewSeparatedValues(inputCSVReader, ',', reader.WithSeparatedValuesHeaders(1))
+	require.NoError(t, err)
 
 	outputFile, err := os.OpenFile("testdata/output.csv", os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
 	require.NoError(t, err)
-	outputWriter := writer.NewSeparatedValues(outputFile, ',')
+	outputWriter, err := writer.NewSeparatedValues(outputFile, ',', writer.WithSeparatedValuesHeaders(inputReader.Headers()))
+	require.NoError(t, err)
 
-	err = orch.Sort(ctx, inputReader, outputWriter, 3, 3)
+	err = orch.Sort(ctx, inputReader, outputWriter)
 	require.NoError(t, err)
 
 	outputFile, err = os.Open("testdata/output.csv")
@@ -91,6 +93,7 @@ func TestBasicOrchestrator(t *testing.T) {
 
 	outputScanner := bufio.NewScanner(outputFile)
 	expected := []string{
+		"name,count",
 		"giraffe,1",
 		"test,2",
 		"no idea,3",

@@ -18,9 +18,9 @@ func TestCreate(t *testing.T) {
 	// Create a mock reader
 	mockReader := mocks.NewMockReader(t)
 	mockReader.On("Next").Return(true, nil).Once()
-	mockReader.On("Read").Return([]byte("data1"), nil).Once()
+	mockReader.On("Read").Return([]byte("data1"), int64(6), nil).Once()
 	mockReader.On("Next").Return(true, nil).Once()
-	mockReader.On("Read").Return([]byte("data2"), nil).Once()
+	mockReader.On("Read").Return([]byte("data2"), int64(6), nil).Once()
 	mockReader.On("Next").Return(false, nil).Once()
 	mockReader.On("Err").Return(nil).Once()
 
@@ -72,9 +72,9 @@ func TestCreate2chunks(t *testing.T) {
 	// Create a mock reader
 	mockReader := mocks.NewMockReader(t)
 	mockReader.On("Next").Return(true, nil).Once()
-	mockReader.On("Read").Return([]byte("data1"), nil).Once()
+	mockReader.On("Read").Return([]byte("data1"), int64(6), nil).Once()
 	mockReader.On("Next").Return(true, nil).Once()
-	mockReader.On("Read").Return([]byte("data2"), nil).Once()
+	mockReader.On("Read").Return([]byte("data2"), int64(6), nil).Once()
 	mockReader.On("Next").Return(false, nil).Once()
 	mockReader.On("Err").Return(nil).Once()
 
@@ -132,11 +132,11 @@ func TestCreate2chunksV2(t *testing.T) {
 	// Create a mock reader
 	mockReader := mocks.NewMockReader(t)
 	mockReader.On("Next").Return(true, nil).Once()
-	mockReader.On("Read").Return([]byte("data1"), nil).Once()
+	mockReader.On("Read").Return([]byte("data1"), int64(6), nil).Once()
 	mockReader.On("Next").Return(true, nil).Once()
-	mockReader.On("Read").Return([]byte("data2"), nil).Once()
+	mockReader.On("Read").Return([]byte("data2"), int64(6), nil).Once()
 	mockReader.On("Next").Return(true, nil).Once()
-	mockReader.On("Read").Return([]byte("data3"), nil).Once()
+	mockReader.On("Read").Return([]byte("data3"), int64(6), nil).Once()
 	mockReader.On("Next").Return(false, nil).Once()
 	mockReader.On("Err").Return(nil).Once()
 
@@ -152,7 +152,7 @@ func TestCreate2chunksV2(t *testing.T) {
 
 	// Create the ChunkCreator with the mock functions
 	cc := chunkcreator.New(
-		2,
+		12,
 		func(model.Writer) (model.Reader, error) {
 			return mocks.NewMockReader(t), nil
 		},

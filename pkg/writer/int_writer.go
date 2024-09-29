@@ -15,7 +15,7 @@ type IntSlice struct {
 func (w *IntSlice) Write(ctx context.Context, rdr model.Reader) error {
 
 	for rdr.Next() {
-		val, err := rdr.Read()
+		val, _, err := rdr.Read()
 		if err != nil {
 			return err
 		}

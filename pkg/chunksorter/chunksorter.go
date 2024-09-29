@@ -87,13 +87,13 @@ outer:
 				break outer
 			}
 
-			row, err := rdr.Read()
+			row, n, err := rdr.Read()
 			if err != nil {
 				return nil, err
 			}
 
 			c.tracef("pushing row %v to buffer", row)
-			err = buffer.PushBack(row)
+			err = buffer.PushBack(row, n)
 			if err != nil {
 				return nil, err
 			}
@@ -113,7 +113,10 @@ outer:
 		return nil, fmt.Errorf("failed to create chunk writer: %w", err)
 	}
 
-	defer wr.Close()
+	defer func() {
+		c.trace("closing chunk writer after sorting")
+		wr.Close()
+	}()
 
 	c.trace("writing rows")
 	for i := range buffer.Len() {

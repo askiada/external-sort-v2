@@ -5,6 +5,6 @@ package model
 //go:generate mockery --name Reader --structname MockReader --filename reader_mock.go
 type Reader interface {
 	Next() bool
-	Read() (interface{}, error)
+	Read() (interface{}, int64, error)
 	Err() error
 }

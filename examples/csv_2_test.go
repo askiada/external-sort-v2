@@ -49,7 +49,7 @@ func TestCSV2(t *testing.T) {
 
 		chunkCSVReader := csv.NewReader(chunkFile)
 
-		return reader.NewSeparatedValues(chunkCSVReader, ','), nil
+		return reader.NewSeparatedValues(chunkCSVReader, ',')
 	}
 
 	currCreatorWriter := 0
@@ -62,7 +62,7 @@ func TestCSV2(t *testing.T) {
 		chunkFileWriter, err := os.OpenFile(fmt.Sprintf("testdata/chunks/chunk_%d.csv", currCreatorWriter), os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
 		require.NoError(t, err)
 
-		return writer.NewSeparatedValues(chunkFileWriter, ','), nil
+		return writer.NewSeparatedValues(chunkFileWriter, ',')
 	}
 
 	currChunkSorterReader := 0
@@ -76,7 +76,7 @@ func TestCSV2(t *testing.T) {
 
 		chunkCSVReader := csv.NewReader(chunkFile)
 
-		return reader.NewSeparatedValues(chunkCSVReader, ','), nil
+		return reader.NewSeparatedValues(chunkCSVReader, ',')
 	}
 
 	currCreatorSorter := 0
@@ -88,7 +88,7 @@ func TestCSV2(t *testing.T) {
 		chunkFileWriter, err := os.OpenFile(fmt.Sprintf("testdata/chunks/chunk_sorted_%d.csv", currCreatorSorter), os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
 		require.NoError(t, err)
 
-		return writer.NewSeparatedValues(chunkFileWriter, ','), nil
+		return writer.NewSeparatedValues(chunkFileWriter, ',')
 	}
 
 	chunkCreator := chunkcreator.New(5, chunkCreatorReaderFn, chunkWriterCreatorFn)
@@ -120,11 +120,13 @@ func TestCSV2(t *testing.T) {
 	inputFile, err := os.Open("testdata/input.csv")
 	require.NoError(t, err)
 
-	inputReader := reader.NewSeparatedValues(csv.NewReader(inputFile), ',')
+	inputReader, err := reader.NewSeparatedValues(csv.NewReader(inputFile), ',')
+	require.NoError(t, err)
 
 	outputFile, err := os.OpenFile("testdata/output.csv", os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
 	require.NoError(t, err)
-	outputWriter := writer.NewSeparatedValues(outputFile, ',')
+	outputWriter, err := writer.NewSeparatedValues(outputFile, ',')
+	require.NoError(t, err)
 
 	err = orch.Sort(context.Background(), inputReader, outputWriter, 3, 3)
 	require.NoError(t, err)

@@ -38,9 +38,9 @@ func TestChunkSorter_Sort(t *testing.T) {
 	mockWriter := mocks.NewMockWriter(t)
 
 	mockInputReader.On("Next").Return(true, nil).Once()
-	mockInputReader.On("Read").Return([]byte("data1"), nil).Once()
+	mockInputReader.On("Read").Return([]byte("data1"), int64(6), nil).Once()
 	mockInputReader.On("Next").Return(true, nil).Once()
-	mockInputReader.On("Read").Return([]byte("data2"), nil).Once()
+	mockInputReader.On("Read").Return([]byte("data2"), int64(6), nil).Once()
 	mockInputReader.On("Next").Return(false, nil).Once()
 	mockInputReader.On("Err").Return(nil).Once()
 
@@ -49,8 +49,8 @@ func TestChunkSorter_Sort(t *testing.T) {
 	mockWriter.On("Close").Return(nil).Once()
 
 	mockVector := vectormocks.NewMockVector(t)
-	mockVector.On("PushBack", []byte("data1")).Return(nil).Once()
-	mockVector.On("PushBack", []byte("data2")).Return(nil).Once()
+	mockVector.On("PushBack", []byte("data1"), int64(6)).Return(nil).Once()
+	mockVector.On("PushBack", []byte("data2"), int64(6)).Return(nil).Once()
 	mockVector.On("Sort").Return().Once()
 	mockVector.On("Len").Return(2).Once()
 	mockVector.On("Get", 0).Return(&vector.Element{Row: []byte("data1")}).Once()

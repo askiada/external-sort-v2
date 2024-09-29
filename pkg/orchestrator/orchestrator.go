@@ -159,7 +159,7 @@ func (o *Orchestrator) Sort(ctx context.Context, input model.Reader, output mode
 
 				o.withFieldsTrace(prepareChunkLoggerFields, "adding chunk to merge")
 				sortedChunks = append(sortedChunks, chunk)
-				if len(sortedChunks) == maxChunkMerger {
+				/*if len(sortedChunks) == maxChunkMerger {
 					select {
 					case <-ctx.Done():
 						return ctx.Err()
@@ -170,7 +170,7 @@ func (o *Orchestrator) Sort(ctx context.Context, input model.Reader, output mode
 
 					o.withFieldsTrace(prepareChunkLoggerFields, "resetting sorted chunks")
 					sortedChunks = nil
-				}
+				}*/
 			}
 		}
 	})
@@ -194,11 +194,6 @@ func (o *Orchestrator) Sort(ctx context.Context, input model.Reader, output mode
 	err = pipe.Run()
 	if err != nil {
 		return fmt.Errorf("failed to run pipeline: %w", err)
-	}
-
-	err = output.Close()
-	if err != nil {
-		return fmt.Errorf("%s %w", err.Error(), ErrFailedToCloseOutput)
 	}
 
 	return nil

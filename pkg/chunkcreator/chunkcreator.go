@@ -8,15 +8,15 @@ import (
 )
 
 type ChunkCreator struct {
-	// chunkSize is a size of a chunk.
-	chunkSize           int
+	// chunkSize is a size in bytes of a chunk.
+	chunkSize           int64
 	chunkWriterFn       func() (model.Writer, error)
 	chunkReaderFn       func(model.Writer) (model.Reader, error)
 	logger              model.Logger
 	defaultLoggerFields map[string]interface{}
 }
 
-func New(chunkSize int, chunkReaderFn func(model.Writer) (model.Reader, error), chunkWriterFn func() (model.Writer, error)) *ChunkCreator {
+func New(chunkSize int64, chunkReaderFn func(model.Writer) (model.Reader, error), chunkWriterFn func() (model.Writer, error)) *ChunkCreator {
 	return &ChunkCreator{
 		chunkSize:     chunkSize,
 		chunkWriterFn: chunkWriterFn,
@@ -33,7 +33,7 @@ func (cc *ChunkCreator) SetLogger(logger model.Logger) {
 }
 
 func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks chan<- model.Reader) error {
-	currCount := 0
+	currChunkSize := int64(0)
 	currChunk, err := cc.chunkWriterFn()
 	if err != nil {
 		return fmt.Errorf("failed to create chunk: %w", err)
@@ -53,9 +53,9 @@ func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks c
 	for {
 		foundNew := input.Next()
 
-		if (!foundNew || currCount >= cc.chunkSize) && currCount > 0 {
+		if (!foundNew || currChunkSize >= cc.chunkSize) && currChunkSize > 0 {
+			currChunkSize = 0
 
-			currCount = 0
 			cc.trace("closing chunk")
 			err := currChunk.Close()
 			if err != nil {
@@ -84,12 +84,14 @@ func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks c
 			case chunks <- currChunkRdr:
 				cc.trace("added chunk to chunkWriters")
 			}
+
 		}
 
-		row, err := input.Read()
+		row, n, err := input.Read()
 		if err != nil {
 			return fmt.Errorf("failed to read row: %w", err)
 		}
+
 		cc.tracef("read row: %v", row)
 
 		err = currChunk.WriteRow(ctx, row)
@@ -99,7 +101,7 @@ func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks c
 
 		cc.tracef("wrote row: %v", row)
 
-		currCount++
+		currChunkSize += n
 	}
 
 	if input.Err() != nil {
@@ -110,7 +112,7 @@ func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks c
 }
 
 func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chunks chan<- model.Reader) error {
-	currCount := 0
+	currChunkSize := int64(0)
 	currChunk, err := cc.chunkWriterFn()
 	if err != nil {
 		return fmt.Errorf("failed to create chunk: %w", err)
@@ -119,9 +121,9 @@ func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chun
 	for {
 		foundNew := input.Next()
 
-		if (!foundNew || currCount >= cc.chunkSize) && currCount > 0 {
+		if (!foundNew || currChunkSize >= cc.chunkSize) && currChunkSize > 0 {
 
-			currCount = 0
+			currChunkSize = 0
 			cc.trace("closing chunk")
 			err := currChunk.Close()
 			if err != nil {
@@ -156,7 +158,7 @@ func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chun
 			break
 		}
 
-		row, err := input.Read()
+		row, n, err := input.Read()
 		if err != nil {
 			return fmt.Errorf("failed to read row: %w", err)
 		}
@@ -169,7 +171,7 @@ func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chun
 
 		cc.tracef("wrote row: %v", row)
 
-		currCount++
+		currChunkSize += n
 	}
 
 	if input.Err() != nil {
