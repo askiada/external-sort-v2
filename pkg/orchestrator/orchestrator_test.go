@@ -206,35 +206,6 @@ func TestOrchestratorChunkMergerError(t *testing.T) {
 	require.ErrorIs(t, err, orchestrator.ErrFailedToMergeChunks)
 }
 
-func TestOrchestratorOutputCloseError(t *testing.T) {
-	t.Parallel()
-
-	inputMock := mocks.NewMockReader(t)
-	outputMock := mocks.NewMockWriter(t)
-
-	chunkSorterMock := mocks.NewMockChunkSorter(t)
-	chunksMergerMock := mocks.NewMockChunksMerger(t)
-	chunkCreatorMock := mocks.NewMockChunkCreator(t)
-	trackerMock := mocks.NewMockTracker(t)
-
-	orch := orchestrator.New(chunkCreatorMock, chunkSorterMock, chunksMergerMock, trackerMock, false)
-
-	chunkReader := mocks.NewMockReader(t)
-
-	ctx := context.Background()
-
-	chunkCreatorMock.On("Create", mock.Anything, inputMock, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-		args.Get(2).(chan<- model.Reader) <- chunkReader
-	})
-	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
-	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil)
-
-	outputMock.On("Close").Return(assert.AnError)
-
-	err := orch.Sort(ctx, inputMock, outputMock, 0, 0)
-	require.ErrorIs(t, err, orchestrator.ErrFailedToCloseOutput)
-}
-
 func TestOrchestratorOutput(t *testing.T) {
 	t.Parallel()
 
@@ -257,8 +228,6 @@ func TestOrchestratorOutput(t *testing.T) {
 	})
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
 	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil)
-
-	outputMock.On("Close").Return(nil)
 
 	err := orch.Sort(ctx, inputMock, outputMock, 0, 0)
 	require.NoError(t, err)
@@ -287,8 +256,6 @@ func TestOrchestratorOutputNegativeMaxChunkSorter(t *testing.T) {
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
 	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil)
 
-	outputMock.On("Close").Return(nil)
-
 	err := orch.Sort(ctx, inputMock, outputMock, -1, 0)
 	require.NoError(t, err)
 }
@@ -315,8 +282,6 @@ func TestOrchestratorOutputNegativeMaxChunkMerger(t *testing.T) {
 	})
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
 	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil)
-
-	outputMock.On("Close").Return(nil)
 
 	err := orch.Sort(ctx, inputMock, outputMock, 0, -1)
 	require.NoError(t, err)
@@ -407,8 +372,6 @@ func TestOrchestratorOutputMaxChunkMerger3(t *testing.T) {
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
 	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil)
 
-	outputMock.On("Close").Return(nil)
-
 	err := orch.Sort(ctx, inputMock, outputMock, 0, 3)
 	require.NoError(t, err)
 }
@@ -437,8 +400,6 @@ func TestOrchestratorOutputMaxChunkMerger2(t *testing.T) {
 	})
 	chunkSorterMock.On("Sort", mock.Anything, chunkReader).Return(mocks.NewMockReader(t), nil)
 	chunksMergerMock.On("Merge", mock.Anything, mock.Anything, outputMock).Return(nil)
-
-	outputMock.On("Close").Return(nil)
 
 	err := orch.Sort(ctx, inputMock, outputMock, 0, 2)
 	require.NoError(t, err)
