@@ -56,14 +56,14 @@ func TestIntSlice(t *testing.T) {
 		return chunkWritersSorter[currCreatorSorter], nil
 	}
 
-	chunkCreator := chunkcreator.New(5, chunkReaderFn, chunkWriterCreatorFn)
+	chunkCreator := chunkcreator.New(40, chunkReaderFn, chunkWriterCreatorFn)
 
 	intKeyFn := key.AllocateInt
 	vectorFn := vector.AllocateSlice
 
 	chunkSorter := chunksorter.New(chunkWriterSorterrFn, chunkReaderFn, intKeyFn, vectorFn)
 
-	chunksMerger := chunksmerger.New(intKeyFn, vectorFn, 2, false)
+	chunksMerger := chunksmerger.New(intKeyFn, vectorFn, 16, false)
 
 	tracker := mocks.NewMockTracker(t)
 
