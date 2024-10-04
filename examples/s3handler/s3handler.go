@@ -8,6 +8,7 @@ import (
 	"io"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/askiada/external-sort-v2/pkg/model"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -54,6 +55,25 @@ func NewHandler(ctx context.Context, endpoint, region string, maxRetries int, lo
 	})
 
 	return &Handler{awsConfig: cfg, s3Client: s3Client, log: log}, nil
+}
+
+func (h *Handler) ContentLength(ctx context.Context, s3URL string) (int64, error) {
+
+	bucket, key, err := Parse(s3URL)
+	if err != nil {
+		return 0, fmt.Errorf("can't parse s3 url: %w", err)
+	}
+
+	headerOutput, err := h.HeadObject(ctx, bucket, key)
+	if err != nil {
+		return 0, fmt.Errorf("can't get header: %w", err)
+	}
+
+	if headerOutput.ContentLength == nil {
+		return 0, fmt.Errorf("can't get content length")
+	}
+
+	return *headerOutput.ContentLength, nil
 }
 
 // HeadObject get the header of an object.
@@ -192,6 +212,9 @@ func (h *Handler) UploadByte(ctx context.Context, bucket, key string, body []byt
 
 // Upload upload a file to S3.
 func (h *Handler) Upload(ctx context.Context, bucket, key string, rdr io.Reader) error {
+
+	h.log.Tracef("uploading %s %s", bucket, key)
+
 	// Create an uploader passing it the S3 client
 	uploader := manager.NewUploader(h.s3Client)
 	uploader.Concurrency = 1
@@ -246,14 +269,19 @@ func (h *Handler) NewReader(ctx context.Context, surl string) (io.Reader, error)
 }
 
 type writer struct {
-	wtr io.WriteCloser
+	wg  *sync.WaitGroup
+	wtr *io.PipeWriter
 	err error
+	log model.Logger
 }
 
 func (w *writer) Write(p []byte) (n int, err error) {
+	defer w.log.Trace("wrote")
 	if w.err != nil {
 		return 0, w.err
 	}
+
+	w.log.Trace("writing")
 
 	return w.wtr.Write(p)
 }
@@ -263,7 +291,22 @@ func (w *writer) Close() error {
 		return w.err
 	}
 
-	return w.wtr.Close()
+	w.log.Trace("closing writer")
+
+	err := w.wtr.CloseWithError(io.EOF)
+	if err != nil {
+		return fmt.Errorf("can't close output: %w", err)
+	}
+
+	w.log.Trace("closed writer")
+
+	w.log.Trace("waiting for upload")
+
+	w.wg.Wait()
+
+	w.log.Trace("uploaded")
+
+	return nil
 }
 
 func (h *Handler) NewWriterCloser(ctx context.Context, surl string) (io.WriteCloser, error) {
@@ -274,19 +317,29 @@ func (h *Handler) NewWriterCloser(ctx context.Context, surl string) (io.WriteClo
 
 	rdr, outputS3Writer := io.Pipe()
 
-	w := &writer{wtr: outputS3Writer}
+	w := &writer{
+		wg:  &sync.WaitGroup{},
+		wtr: outputS3Writer,
+		log: h.log,
+	}
+
+	w.wg.Add(1)
 
 	go func() {
-		defer rdr.Close()
+		defer w.wg.Done()
+		defer rdr.CloseWithError(io.EOF)
+
+		w.log.Tracef("uploading output %s", surl)
 
 		err := h.Upload(ctx, outputBucket, outputKey, rdr)
 		if err != nil {
 			w.err = fmt.Errorf("can't upload output: %w", err)
 		}
+
+		w.log.Trace("uploaded output %s", surl)
 	}()
 
 	return w, nil
-
 }
 
 // Parse an s3Url and return the bucket and key. Performs some basic validation

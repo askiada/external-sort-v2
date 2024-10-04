@@ -32,36 +32,40 @@ func TestIntSlice(t *testing.T) {
 		{}, //chunk 2
 	}
 
-	chunkReaderFn := func(w model.Writer) (model.Reader, error) {
-		return &reader.IntSlice{Values: w.(*writer.IntSlice).Values}, nil
+	chunkCreatorReaderFn := func(idx int) (model.Reader, error) {
+		return &reader.IntSlice{Values: chunkWritersCreator[idx].Values}, nil
+	}
+
+	chunkSorterReaderFn := func(idx int) (model.Reader, error) {
+		return &reader.IntSlice{Values: chunkWritersSorter[idx].Values}, nil
 	}
 
 	currCreatorWriter := 0
 
 	m := sync.Mutex{}
 
-	chunkWriterCreatorFn := func() (model.Writer, error) {
+	chunkWriterCreatorFn := func() (int, model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currCreatorWriter++ }()
-		return chunkWritersCreator[currCreatorWriter], nil
+		return currCreatorWriter, chunkWritersCreator[currCreatorWriter], nil
 	}
 
 	currCreatorSorter := 0
 
-	chunkWriterSorterrFn := func() (model.Writer, error) {
+	chunkWriterSorterrFn := func() (int, model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currCreatorSorter++ }()
-		return chunkWritersSorter[currCreatorSorter], nil
+		return currCreatorSorter, chunkWritersSorter[currCreatorSorter], nil
 	}
 
-	chunkCreator := chunkcreator.New(40, chunkReaderFn, chunkWriterCreatorFn)
+	chunkCreator := chunkcreator.New(40, chunkCreatorReaderFn, chunkWriterCreatorFn)
 
 	intKeyFn := key.AllocateInt
 	vectorFn := vector.AllocateSlice
 
-	chunkSorter := chunksorter.New(chunkWriterSorterrFn, chunkReaderFn, intKeyFn, vectorFn)
+	chunkSorter := chunksorter.New(chunkWriterSorterrFn, chunkSorterReaderFn, intKeyFn, vectorFn)
 
 	chunksMerger := chunksmerger.New(intKeyFn, vectorFn, 16, false)
 

@@ -41,8 +41,8 @@ func TestBasicOrchestrator(t *testing.T) {
 		return writer.NewSeparatedValues(wr, ',')
 	}
 
-	chunkRdrFn := func(idx int) (io.Reader, error) {
-		chunkFile, err := os.Open(fmt.Sprintf("testdata/chunks/chunk_sorted_%d.csv", idx))
+	chunkRdrFn := func(step string, idx int) (io.Reader, error) {
+		chunkFile, err := os.Open(fmt.Sprintf("testdata/chunks/chunk_sorted_%s_%d.csv", step, idx))
 		if err != nil {
 			return nil, err
 		}
@@ -50,8 +50,12 @@ func TestBasicOrchestrator(t *testing.T) {
 		return chunkFile, nil
 	}
 
-	chunkWrFn := func(idx int) (io.WriteCloser, error) {
-		chunkFileWriter, err := os.OpenFile(fmt.Sprintf("testdata/chunks/chunk_sorted_%d.csv", idx), os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
+	chunkWrFn := func(step string, idx int) (io.WriteCloser, error) {
+		chunkFileWriter, err := os.OpenFile(
+			fmt.Sprintf("testdata/chunks/chunk_sorted_%s_%d.csv", step, idx),
+			os.O_CREATE|os.O_TRUNC|os.O_RDWR,
+			os.ModePerm,
+		)
 		if err != nil {
 			return nil, err
 		}

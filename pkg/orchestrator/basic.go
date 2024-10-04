@@ -15,24 +15,24 @@ import (
 	"github.com/askiada/external-sort-v2/pkg/model/mocks"
 )
 
-const defaultSortConcurrency = 10
-
 type IOToReaderFn func(io.Reader) (model.Reader, error)
 
 type IOToWriterFn func(io.WriteCloser) (model.Writer, error)
 
-type ChunkReaderFn func(idx int) (io.Reader, error)
+type ChunkReaderFn func(step string, idx int) (io.Reader, error)
 
-type ChunkWriterFn func(idx int) (io.WriteCloser, error)
+type ChunkWriterFn func(step string, idx int) (io.WriteCloser, error)
 
 type BasicOrchestrator struct {
-	orch                   *Orchestrator
-	chunkCreator           *chunkcreator.ChunkCreator
-	chunkSorter            *chunksorter.ChunkSorter
-	chunksMerger           *chunksmerger.ChunksMerger
-	defaultSortConcurrency int
+	orch         *Orchestrator
+	chunkCreator *chunkcreator.ChunkCreator
+	chunkSorter  *chunksorter.ChunkSorter
+	chunksMerger *chunksmerger.ChunksMerger
 }
 
+// 90% of maxMemoryBytes for Chunk creation and sorting
+// 5% of maxMemoryBytes for Chunk merging
+// 5% for everything else
 func NewBasic(
 	rdrFn IOToReaderFn,
 	wrFn IOToWriterFn,
@@ -43,43 +43,46 @@ func NewBasic(
 	dropDuplicates bool,
 ) *BasicOrchestrator {
 
+	chunkCreatorReaderFn := func(idx int) (model.Reader, error) {
+		curr, err := chunkRdrFn("sort", idx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create chunk reader: %w", err)
+		}
+
+		rdr, err := rdrFn(curr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create reader: %w", err)
+		}
+
+		return rdr, err
+	}
+
 	currChunkCreatorReader := 0
 	m := sync.Mutex{}
 
-	inputOffsets := []*io.PipeReader{}
-
-	chunkCreatorReaderFn := func(w model.Writer) (model.Reader, error) {
+	chunkWriterCreatorFn := func() (int, model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currChunkCreatorReader++ }()
 
-		pr := inputOffsets[currChunkCreatorReader]
-		return rdrFn(pr)
-	}
+		curr, err := chunkWrFn("sort", currChunkCreatorReader)
+		if err != nil {
+			return 0, nil, fmt.Errorf("failed to create chunk writer: %w", err)
+		}
 
-	currCreatorWriter := 0
+		wr, err := wrFn(curr)
+		if err != nil {
+			return 0, nil, fmt.Errorf("failed to create writer: %w", err)
+		}
 
-	chunkWriterCreatorFn := func() (model.Writer, error) {
-		m.Lock()
-		defer m.Unlock()
-		defer func() { currCreatorWriter++ }()
-
-		pr, pw := io.Pipe()
-
-		inputOffsets = append(inputOffsets, pr)
-		return wrFn(pw)
+		return currChunkCreatorReader, wr, err
 	}
 
 	giveSomeRoomMemory := max(90*maxMemoryBytes/100, 1)
 
-	chunkCreator := chunkcreator.New(giveSomeRoomMemory/defaultSortConcurrency, chunkCreatorReaderFn, chunkWriterCreatorFn)
-	currChunkSorterReader := 0
-	chunkSorterReaderFn := func(w model.Writer) (model.Reader, error) {
-		m.Lock()
-		defer m.Unlock()
-		defer func() { currChunkSorterReader++ }()
-
-		curr, err := chunkRdrFn(currChunkSorterReader)
+	chunkCreator := chunkcreator.New(giveSomeRoomMemory, chunkCreatorReaderFn, chunkWriterCreatorFn)
+	chunkSorterReaderFn := func(idx int) (model.Reader, error) {
+		curr, err := chunkRdrFn("sort", idx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create chunk reader: %w", err)
 		}
@@ -89,17 +92,22 @@ func NewBasic(
 
 	currCreatorSorter := 0
 
-	chunkWriterSorterrFn := func() (model.Writer, error) {
+	chunkWriterSorterrFn := func() (int, model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currCreatorSorter++ }()
 
-		curr, err := chunkWrFn(currCreatorSorter)
+		curr, err := chunkWrFn("sort", currCreatorSorter)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create chunk writer: %w", err)
+			return 0, nil, fmt.Errorf("failed to create chunk writer: %w", err)
 		}
 
-		return wrFn(curr)
+		wr, err := wrFn(curr)
+		if err != nil {
+			return 0, nil, fmt.Errorf("failed to create writer: %w", err)
+		}
+
+		return currCreatorSorter, wr, err
 	}
 
 	chunkSorter := chunksorter.New(chunkWriterSorterrFn, chunkSorterReaderFn, keyFn, vector.AllocateSlice)
@@ -111,9 +119,9 @@ func NewBasic(
 	// TODO: add
 	tracker := mocks.NewMockTracker(&testing.T{})
 
-	orch := New(chunkCreator, chunkSorter, chunkMerger, tracker, false)
+	orch := New(chunkCreator, chunkSorter, chunkMerger, tracker, true)
 
-	return &BasicOrchestrator{orch, chunkCreator, chunkSorter, chunkMerger, defaultSortConcurrency}
+	return &BasicOrchestrator{orch, chunkCreator, chunkSorter, chunkMerger}
 }
 
 func (bo *BasicOrchestrator) SetLogger(logger model.Logger) {
@@ -123,6 +131,8 @@ func (bo *BasicOrchestrator) SetLogger(logger model.Logger) {
 	bo.orch.SetLogger(logger)
 }
 
-func (bo *BasicOrchestrator) Sort(ctx context.Context, input model.Reader, output model.Writer) error {
-	return bo.orch.Sort(ctx, input, output, bo.defaultSortConcurrency, 0)
+const defaultSortConcurrency = 10
+
+func (bo *BasicOrchestrator) Sort(ctx context.Context, inputContentLenght int64, input model.Reader, output model.Writer) error {
+	return bo.orch.Sort(ctx, inputContentLenght, input, output, defaultSortConcurrency, 0)
 }

@@ -76,13 +76,9 @@ func TestCSV(t *testing.T) {
 		chWrSort1,
 	}
 
-	currChunkCreatorReader := 0
 	m := sync.Mutex{}
 
-	chunkCreatorReaderFn := func(w model.Writer) (model.Reader, error) {
-		m.Lock()
-		defer m.Unlock()
-		defer func() { currChunkCreatorReader++ }()
+	chunkCreatorReaderFn := func(idx int) (model.Reader, error) {
 
 		pr, pw := io.Pipe()
 		go func() {
@@ -90,7 +86,7 @@ func TestCSV(t *testing.T) {
 			defer pw.Close()
 
 			// Copy the data from the buffer to the writer
-			n, err := io.Copy(pw, chunkBufferCreator[currChunkCreatorReader])
+			n, err := io.Copy(pw, chunkBufferCreator[idx])
 			require.NoError(t, err)
 
 			log.Tracef("copied %d bytes", n)
@@ -101,19 +97,14 @@ func TestCSV(t *testing.T) {
 		return reader.NewSeparatedValues(chunkCSVReader, ',')
 	}
 
-	currChunkSorterReader := 0
-
-	chunkSorterReaderFn := func(w model.Writer) (model.Reader, error) {
-		m.Lock()
-		defer m.Unlock()
-		defer func() { currChunkSorterReader++ }()
+	chunkSorterReaderFn := func(idx int) (model.Reader, error) {
 		pr, pw := io.Pipe()
 		go func() {
 			// It's important to close the writer when the copy is done to signal EOF to the reader
 			defer pw.Close()
 
 			// Copy the data from the buffer to the writer
-			_, err := io.Copy(pw, chunkBufferSorter[currChunkSorterReader])
+			_, err := io.Copy(pw, chunkBufferSorter[idx])
 			require.NoError(t, err)
 		}()
 
@@ -124,20 +115,20 @@ func TestCSV(t *testing.T) {
 
 	currCreatorWriter := 0
 
-	chunkWriterCreatorFn := func() (model.Writer, error) {
+	chunkWriterCreatorFn := func() (int, model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currCreatorWriter++ }()
-		return chunkWritersCreator[currCreatorWriter], nil
+		return currCreatorWriter, chunkWritersCreator[currCreatorWriter], nil
 	}
 
 	currCreatorSorter := 0
 
-	chunkWriterSorterrFn := func() (model.Writer, error) {
+	chunkWriterSorterrFn := func() (int, model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currCreatorSorter++ }()
-		return chunkWritersSorter[currCreatorSorter], nil
+		return currCreatorSorter, chunkWritersSorter[currCreatorSorter], nil
 	}
 
 	chunkCreator := chunkcreator.New(40, chunkCreatorReaderFn, chunkWriterCreatorFn)

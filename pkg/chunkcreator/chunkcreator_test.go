@@ -34,11 +34,11 @@ func TestCreate(t *testing.T) {
 	// Create the ChunkCreator with the mock functions
 	cc := chunkcreator.New(
 		10,
-		func(model.Writer) (model.Reader, error) {
+		func(idx int) (model.Reader, error) {
 			return mocks.NewMockReader(t), nil
 		},
-		func() (model.Writer, error) {
-			return mockWriter, nil
+		func() (int, model.Writer, error) {
+			return 0, mockWriter, nil
 		})
 	chunkChan := make(chan model.Reader)
 
@@ -89,11 +89,11 @@ func TestCreate2chunks(t *testing.T) {
 	// Create the ChunkCreator with the mock functions
 	cc := chunkcreator.New(
 		1,
-		func(model.Writer) (model.Reader, error) {
+		func(idx int) (model.Reader, error) {
 			return mocks.NewMockReader(t), nil
 		},
-		func() (model.Writer, error) {
-			return mockWriter, nil
+		func() (int, model.Writer, error) {
+			return 0, mockWriter, nil
 		})
 
 	chunkChan := make(chan model.Reader)
@@ -153,11 +153,11 @@ func TestCreate2chunksV2(t *testing.T) {
 	// Create the ChunkCreator with the mock functions
 	cc := chunkcreator.New(
 		12,
-		func(model.Writer) (model.Reader, error) {
+		func(idx int) (model.Reader, error) {
 			return mocks.NewMockReader(t), nil
 		},
-		func() (model.Writer, error) {
-			return mockWriter, nil
+		func() (int, model.Writer, error) {
+			return 0, mockWriter, nil
 		})
 
 	chunkChan := make(chan model.Reader)

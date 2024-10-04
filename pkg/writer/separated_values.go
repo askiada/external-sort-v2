@@ -75,13 +75,18 @@ func (w *SeparatedValuesWriter) Write(ctx context.Context, rdr model.Reader) err
 }
 
 func (s *SeparatedValuesWriter) Close() error {
-	defer s.origWriter.Close()
-
 	s.w.Flush()
-
 	if s.w.Error() != nil {
 		return errors.Wrap(s.w.Error(), "can't close writer")
 	}
+
+	err := s.origWriter.Close()
+	if err != nil {
+		return fmt.Errorf("can't close output writer: %w", err)
+	}
+
+	s.origWriter = nil
+	s.w = nil
 
 	return nil
 }

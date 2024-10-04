@@ -65,8 +65,8 @@ func TestChunkSorter_Sort(t *testing.T) {
 
 	// Create the ChunkSorter instance
 	sorter := chunksorter.New(
-		func() (model.Writer, error) { return mockWriter, nil },
-		func(model.Writer) (model.Reader, error) { return mocks.NewMockReader(t), nil },
+		func() (int, model.Writer, error) { return 0, mockWriter, nil },
+		func(int) (model.Reader, error) { return mocks.NewMockReader(t), nil },
 		mockAllocateKeyFn.Execute,
 		mockAllocateVectorFnfunc.Execute,
 	)

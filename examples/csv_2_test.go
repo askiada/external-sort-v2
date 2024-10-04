@@ -35,16 +35,11 @@ func TestCSV2(t *testing.T) {
 
 	log := logger.NewLogrus()
 	log.SetLevel("trace")
-
-	currChunkCreatorReader := 0
 	m := sync.Mutex{}
 
-	chunkCreatorReaderFn := func(w model.Writer) (model.Reader, error) {
-		m.Lock()
-		defer m.Unlock()
-		defer func() { currChunkCreatorReader++ }()
+	chunkCreatorReaderFn := func(idx int) (model.Reader, error) {
 
-		chunkFile, err := os.Open(fmt.Sprintf("testdata/chunks/chunk_%d.csv", currChunkCreatorReader))
+		chunkFile, err := os.Open(fmt.Sprintf("testdata/chunks/chunk_%d.csv", idx))
 		require.NoError(t, err)
 
 		chunkCSVReader := csv.NewReader(chunkFile)
@@ -54,24 +49,27 @@ func TestCSV2(t *testing.T) {
 
 	currCreatorWriter := 0
 
-	chunkWriterCreatorFn := func() (model.Writer, error) {
+	chunkWriterCreatorFn := func() (int, model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currCreatorWriter++ }()
 
-		chunkFileWriter, err := os.OpenFile(fmt.Sprintf("testdata/chunks/chunk_%d.csv", currCreatorWriter), os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
+		chunkFileWriter, err := os.OpenFile(
+			fmt.Sprintf("testdata/chunks/chunk_%d.csv", currCreatorWriter),
+			os.O_CREATE|os.O_TRUNC|os.O_RDWR,
+			os.ModePerm,
+		)
 		require.NoError(t, err)
 
-		return writer.NewSeparatedValues(chunkFileWriter, ',')
+		wr, err := writer.NewSeparatedValues(chunkFileWriter, ',')
+		require.NoError(t, err)
+
+		return currCreatorWriter, wr, nil
 	}
 
-	currChunkSorterReader := 0
-	chunkSorterReaderFn := func(w model.Writer) (model.Reader, error) {
-		m.Lock()
-		defer m.Unlock()
-		defer func() { currChunkSorterReader++ }()
+	chunkSorterReaderFn := func(idx int) (model.Reader, error) {
 
-		chunkFile, err := os.Open(fmt.Sprintf("testdata/chunks/chunk_sorted_%d.csv", currChunkSorterReader))
+		chunkFile, err := os.Open(fmt.Sprintf("testdata/chunks/chunk_sorted_%d.csv", idx))
 		require.NoError(t, err)
 
 		chunkCSVReader := csv.NewReader(chunkFile)
@@ -81,14 +79,21 @@ func TestCSV2(t *testing.T) {
 
 	currCreatorSorter := 0
 
-	chunkWriterSorterrFn := func() (model.Writer, error) {
+	chunkWriterSorterrFn := func() (int, model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currCreatorSorter++ }()
-		chunkFileWriter, err := os.OpenFile(fmt.Sprintf("testdata/chunks/chunk_sorted_%d.csv", currCreatorSorter), os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
+		chunkFileWriter, err := os.OpenFile(
+			fmt.Sprintf("testdata/chunks/chunk_sorted_%d.csv", currCreatorSorter),
+			os.O_CREATE|os.O_TRUNC|os.O_RDWR,
+			os.ModePerm,
+		)
 		require.NoError(t, err)
 
-		return writer.NewSeparatedValues(chunkFileWriter, ',')
+		wr, err := writer.NewSeparatedValues(chunkFileWriter, ',')
+		require.NoError(t, err)
+
+		return currCreatorSorter, wr, nil
 	}
 
 	chunkCreator := chunkcreator.New(5, chunkCreatorReaderFn, chunkWriterCreatorFn)

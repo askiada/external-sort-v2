@@ -12,16 +12,16 @@ import (
 type ChunkSorter struct {
 	keyFn         model.AllocateKeyFn
 	vectorFn      vector.AllocateVectorFnfunc
-	chunkWriterFn func() (model.Writer, error)
-	chunkReaderFn func(model.Writer) (model.Reader, error)
+	chunkWriterFn func() (int, model.Writer, error)
+	chunkReaderFn func(int) (model.Reader, error)
 
 	logger              model.Logger
 	defaultLoggerFields map[string]interface{}
 }
 
 func New(
-	chunkWriterFn func() (model.Writer, error),
-	chunkReaderFn func(model.Writer) (model.Reader, error),
+	chunkWriterFn func() (int, model.Writer, error),
+	chunkReaderFn func(int) (model.Reader, error),
 	keyFn model.AllocateKeyFn,
 	vectroFn vector.AllocateVectorFnfunc,
 ) *ChunkSorter {
@@ -70,10 +70,13 @@ func (c *ChunkSorter) Sort(ctx context.Context, rdr model.Reader) (model.Reader,
 	}
 
 	c.trace("creating output buffer")
+
 	buffer := c.vectorFn(c.keyFn)
 	if buffer == nil {
 		return nil, ErrNilVector
 	}
+
+	c.trace("output buffer created")
 
 outer:
 	for {
@@ -108,15 +111,12 @@ outer:
 	buffer.Sort()
 
 	c.trace("creating chunk writer")
-	wr, err := c.chunkWriterFn()
+	chunkIdx, wr, err := c.chunkWriterFn()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create chunk writer: %w", err)
 	}
 
-	defer func() {
-		c.trace("closing chunk writer after sorting")
-		wr.Close()
-	}()
+	c.debugf("chunk writer created idx: %d", chunkIdx)
 
 	c.trace("writing rows")
 	for i := range buffer.Len() {
@@ -132,14 +132,27 @@ outer:
 		}
 	}
 
-	c.trace("resetting buffer")
+	c.trace("resetting output buffer")
 	buffer.Reset()
 
-	c.trace("creating chunk reader")
-	chunkRdr, err := c.chunkReaderFn(wr)
+	buffer = nil
+
+	c.trace("closing chunk writer after sorting")
+	err = wr.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed to close chunk writer: %w", err)
+	}
+
+	c.infof("chunk %d sorted", chunkIdx)
+
+	c.tracef("creating chunk reader: %d", chunkIdx)
+
+	chunkRdr, err := c.chunkReaderFn(chunkIdx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create chunk reader: %w", err)
 	}
+
+	c.debugf("chunk reader created idx: %d", chunkIdx)
 
 	return chunkRdr, nil
 }

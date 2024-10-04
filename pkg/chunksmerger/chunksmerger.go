@@ -10,7 +10,7 @@ import (
 )
 
 type ChunksMerger struct {
-	chunkBufferSize int64
+	totalBufferSize int64
 	keyFn           model.AllocateKeyFn
 	vectorFn        vector.AllocateVectorFnfunc
 	dropDuplicates  bool
@@ -22,11 +22,11 @@ type ChunksMerger struct {
 func New(
 	keyFn model.AllocateKeyFn,
 	vectorFn vector.AllocateVectorFnfunc,
-	chunkBufferSize int64,
+	totalBufferSize int64,
 	dropDuplicates bool,
 ) *ChunksMerger {
 	return &ChunksMerger{
-		chunkBufferSize: chunkBufferSize,
+		totalBufferSize: totalBufferSize,
 		keyFn:           keyFn,
 		vectorFn:        vectorFn,
 		dropDuplicates:  dropDuplicates,
@@ -41,19 +41,21 @@ func (c *ChunksMerger) SetLogger(logger model.Logger) {
 	c.logger = logger
 }
 
+func (c *ChunksMerger) MaxMemory() int64 {
+	return c.totalBufferSize
+}
+
 func (c *ChunksMerger) Merge(ctx context.Context, chunks []model.Reader, outputWriter model.Writer) (err error) {
-	defer func() {
-		c.trace("closing output writer after merge")
-		outputWriter.Close()
-	}()
 	c.trace("creating output buffer")
 	outputBuffer := c.vectorFn(c.keyFn)
 
 	chunkInfos := &chunkInfos{list: make([]*chunkInfo, 0, len(chunks))}
 
+	chunkBufferSize := max(c.totalBufferSize/int64(len(chunks)+1), 1)
+
 	for _, chunk := range chunks {
 		c.trace("creating chunk info")
-		err = chunkInfos.new(chunk, c.chunkBufferSize, c.vectorFn(c.keyFn))
+		err = chunkInfos.new(chunk, chunkBufferSize, c.vectorFn(c.keyFn))
 		if err != nil {
 			return err
 		}
@@ -64,11 +66,9 @@ func (c *ChunksMerger) Merge(ctx context.Context, chunks []model.Reader, outputW
 	c.trace("resetting order")
 	chunkInfos.resetOrder()
 
-	c.trace("creating output writer")
-
 	for {
 
-		if chunkInfos.len() == 0 || outputBuffer.Size() >= c.chunkBufferSize {
+		if chunkInfos.len() == 0 || outputBuffer.Size() >= chunkBufferSize {
 			c.trace("writing buffer")
 			err := c.writeBuffer(ctx, outputWriter, outputBuffer)
 			if err != nil {
@@ -91,7 +91,7 @@ func (c *ChunksMerger) Merge(ctx context.Context, chunks []model.Reader, outputW
 
 		c.trace("updating chunks")
 		// remove the first element from the chunk we pulled the smallest value
-		err = c.updateChunks(chunkInfos, minChunk, minIdx, c.chunkBufferSize)
+		err = c.updateChunks(chunkInfos, minChunk, minIdx, chunkBufferSize)
 		if err != nil {
 			return fmt.Errorf("can't update chunks: %w", err)
 		}
@@ -99,6 +99,14 @@ func (c *ChunksMerger) Merge(ctx context.Context, chunks []model.Reader, outputW
 
 	c.trace("resetting output buffer")
 	outputBuffer.Reset()
+
+	c.trace("closing output writer after merge")
+	err = outputWriter.Close()
+	if err != nil {
+		return fmt.Errorf("can't close output writer: %w", err)
+	}
+
+	c.infof("chunks merged")
 
 	return nil
 }
