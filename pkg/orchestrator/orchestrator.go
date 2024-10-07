@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"runtime"
 
 	"github.com/askiada/external-sort-v2/pkg/model"
 	"github.com/askiada/go-pipeline/pkg/pipeline"
@@ -135,18 +134,10 @@ func (o *Orchestrator) Sort(
 			fn = o.ChunkCreator.SyncCreate
 		}
 
-		var m1, m2 runtime.MemStats
-
-		runtime.ReadMemStats(&m1)
-
 		err = fn(ctx, input, rootChan, chunkSize)
 		if err != nil {
 			return fmt.Errorf("%s :%w", err.Error(), ErrFailedToCreateChunks)
 		}
-
-		runtime.ReadMemStats(&m2)
-		fmt.Println("total:", m2.TotalAlloc-m1.TotalAlloc)
-		fmt.Println("mallocs:", m2.Mallocs-m1.Mallocs)
 
 		return nil
 	})

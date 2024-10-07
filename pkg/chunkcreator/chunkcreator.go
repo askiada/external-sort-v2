@@ -3,7 +3,6 @@ package chunkcreator
 import (
 	"context"
 	"fmt"
-	"runtime"
 
 	"github.com/askiada/external-sort-v2/pkg/model"
 )
@@ -172,21 +171,12 @@ func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chun
 					break
 				}
 
-				cc.tracef("creating chunk writer")
-				var m1, m2 runtime.MemStats
-
-				runtime.ReadMemStats(&m1)
-
 				chunkIdx, currChunk, err = cc.chunkWriterFn()
 				if err != nil {
 					return fmt.Errorf("failed to create chunk: %w", err)
 				}
 
 				cc.infof("chunk writer created idx: %d", chunkIdx)
-
-				runtime.ReadMemStats(&m2)
-				fmt.Println("total:", m2.TotalAlloc-m1.TotalAlloc)
-				fmt.Println("mallocs:", m2.Mallocs-m1.Mallocs)
 			}
 		}
 

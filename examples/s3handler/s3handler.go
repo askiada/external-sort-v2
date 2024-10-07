@@ -252,6 +252,11 @@ func (h *Handler) NewReader(ctx context.Context, surl string) (io.Reader, error)
 		return nil, fmt.Errorf("unable to parse s3 url %s: %w", surl, err)
 	}
 
+	_, err = h.HeadObject(ctx, s3Bucket, s3Key)
+	if err != nil {
+		return nil, fmt.Errorf("can't get header: %w", err)
+	}
+
 	inputS3Reader, wtr := io.Pipe()
 
 	r := &reader{rdr: inputS3Reader}
