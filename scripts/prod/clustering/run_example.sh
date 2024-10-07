@@ -38,8 +38,8 @@ export AWS_RETRIES=1
 
 echo "Starting external services"
 
-export INPUT_S3_URL="s3://blokur-data/mlc-recordings-cluster/recording-identifiers/output/MRI/POC/initial_pos_unique_sound_recordings_intermediary_other_clusters-all.csv"
-export OUTPUT_S3_URL="s3://blokur-data/mlc-recordings-cluster/recording-identifiers/output/MRI/POC/initial_pos_unique_sound_recordings_intermediary_other_clusters-all_unique.csv"
+export INPUT_S3_URL="s3://blokur-data/mlc-recordings-cluster/recording-identifiers/output/MRI/POC/mri_poc_other_clusters-all.csv"
+export OUTPUT_S3_URL="s3://blokur-data/mlc-recordings-cluster/recording-identifiers/output/MRI/POC/mri_poc_other_clusters-all_unique.csv"
 
 go build -o bin/clustering scripts/prod/clustering/main.go
 
