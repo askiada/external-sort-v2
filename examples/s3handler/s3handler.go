@@ -338,6 +338,9 @@ func (h *Handler) NewWriterCloser(ctx context.Context, surl string) (io.WriteClo
 
 		err := h.Upload(ctx, outputBucket, outputKey, rdr)
 		if err != nil {
+
+			h.log.Errorf("can't upload output %s: %v", surl, err)
+
 			w.err = fmt.Errorf("can't upload output: %w", err)
 		}
 

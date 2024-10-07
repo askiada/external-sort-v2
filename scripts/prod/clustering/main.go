@@ -107,7 +107,7 @@ func sort(ctx context.Context, inputS3URL, outputS3URL string, log model.Logger)
 		return key.AllocateUpperString(tKey.Value().(string))
 	}
 
-	orch := orchestrator.NewBasic(creatorRdrFn, creatorWrFn, chunkRdrFn, chunkWrFn, tsvKeyFn, 5e+8, true)
+	orch := orchestrator.NewBasic(creatorRdrFn, creatorWrFn, chunkRdrFn, chunkWrFn, tsvKeyFn, 1e+9, true)
 
 	orch.SetLogger(log)
 
