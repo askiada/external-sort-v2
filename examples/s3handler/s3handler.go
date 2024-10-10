@@ -8,7 +8,6 @@ import (
 	"io"
 	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/askiada/external-sort-v2/pkg/model"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -235,15 +234,20 @@ func (h *Handler) Upload(ctx context.Context, bucket, key string, rdr io.Reader)
 
 type reader struct {
 	rdr io.Reader
-	err error
+	err chan error
 }
 
 func (r *reader) Read(p []byte) (n int, err error) {
-	if r.err != nil {
-		return 0, r.err
-	}
+	select {
+	case err := <-r.err:
+		if err != nil {
+			return 0, fmt.Errorf("can't read: %w", err)
+		}
 
-	return r.rdr.Read(p)
+		return 0, nil
+	default:
+		return r.rdr.Read(p)
+	}
 }
 
 func (h *Handler) NewReader(ctx context.Context, surl string) (io.Reader, error) {
@@ -259,14 +263,17 @@ func (h *Handler) NewReader(ctx context.Context, surl string) (io.Reader, error)
 
 	inputS3Reader, wtr := io.Pipe()
 
-	r := &reader{rdr: inputS3Reader}
+	r := &reader{
+		rdr: inputS3Reader,
+		err: make(chan error, 1),
+	}
 
 	go func() {
 		defer wtr.Close()
 
 		err := h.Download(ctx, s3Bucket, s3Key, wtr)
 		if err != nil {
-			r.err = fmt.Errorf("can't stream input: %w", err)
+			r.err <- fmt.Errorf("can't stream input: %w", err)
 		}
 	}()
 
@@ -274,28 +281,28 @@ func (h *Handler) NewReader(ctx context.Context, surl string) (io.Reader, error)
 }
 
 type writer struct {
-	wg  *sync.WaitGroup
-	wtr *io.PipeWriter
-	err error
-	log model.Logger
+	done chan struct{}
+	wtr  *io.PipeWriter
+	err  chan error
+	log  model.Logger
 }
 
 func (w *writer) Write(p []byte) (n int, err error) {
-	defer w.log.Trace("wrote")
-	if w.err != nil {
-		return 0, w.err
+	select {
+	case err := <-w.err:
+		if err != nil {
+			return 0, fmt.Errorf("can't write: %w", err)
+		}
+
+		return 0, nil
+	default:
+		defer w.log.Trace("wrote")
+		w.log.Trace("writing")
+		return w.wtr.Write(p)
 	}
-
-	w.log.Trace("writing")
-
-	return w.wtr.Write(p)
 }
 
 func (w *writer) Close() error {
-	if w.err != nil {
-		return w.err
-	}
-
 	w.log.Trace("closing writer")
 
 	err := w.wtr.CloseWithError(io.EOF)
@@ -305,13 +312,18 @@ func (w *writer) Close() error {
 
 	w.log.Trace("closed writer")
 
-	w.log.Trace("waiting for upload")
+	select {
+	case err := <-w.err:
+		if err != nil {
+			return fmt.Errorf("can't close: %w", err)
+		}
 
-	w.wg.Wait()
+		return nil
+	case <-w.done:
+		w.log.Trace("uploaded")
 
-	w.log.Trace("uploaded")
-
-	return nil
+		return nil
+	}
 }
 
 func (h *Handler) NewWriterCloser(ctx context.Context, surl string) (io.WriteCloser, error) {
@@ -323,25 +335,23 @@ func (h *Handler) NewWriterCloser(ctx context.Context, surl string) (io.WriteClo
 	rdr, outputS3Writer := io.Pipe()
 
 	w := &writer{
-		wg:  &sync.WaitGroup{},
-		wtr: outputS3Writer,
-		log: h.log,
+		wtr:  outputS3Writer,
+		log:  h.log,
+		done: make(chan struct{}, 1),
+		err:  make(chan error, 1),
 	}
 
-	w.wg.Add(1)
-
 	go func() {
-		defer w.wg.Done()
-		defer rdr.CloseWithError(io.EOF)
-
+		defer func() {
+			close(w.done)
+			close(w.err)
+			rdr.CloseWithError(io.EOF)
+		}()
 		w.log.Tracef("uploading output %s", surl)
 
 		err := h.Upload(ctx, outputBucket, outputKey, rdr)
 		if err != nil {
-
-			h.log.Errorf("can't upload output %s: %v", surl, err)
-
-			w.err = fmt.Errorf("can't upload output: %w", err)
+			w.err <- fmt.Errorf("can't upload output: %w", err)
 		}
 
 		w.log.Trace("uploaded output %s", surl)
