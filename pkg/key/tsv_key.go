@@ -3,11 +3,13 @@ package key
 import (
 	"fmt"
 	"strings"
+
+	"github.com/askiada/external-sort-v2/pkg/model"
 )
 
 const salt = "##!##"
 
-func AllocateCsv(row interface{}, pos ...int) (Key, error) {
+func AllocateCsv(row interface{}, pos ...int) (model.Key, error) {
 	splitted, ok := row.([]string)
 	if !ok {
 		return nil, fmt.Errorf("can't convert interface{} to []string: %+v", row)

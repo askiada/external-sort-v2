@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/askiada/external-sort-v2/internal/logger"
-	"github.com/askiada/external-sort-v2/internal/model"
-	"github.com/askiada/external-sort-v2/internal/model/mocks"
 	"github.com/askiada/external-sort-v2/internal/vector"
-	"github.com/askiada/external-sort-v2/internal/vector/key"
 	"github.com/askiada/external-sort-v2/pkg/chunkcreator"
 	"github.com/askiada/external-sort-v2/pkg/chunksmerger"
 	"github.com/askiada/external-sort-v2/pkg/chunksorter"
+	"github.com/askiada/external-sort-v2/pkg/key"
+	"github.com/askiada/external-sort-v2/pkg/model"
+	"github.com/askiada/external-sort-v2/pkg/model/mocks"
 	"github.com/askiada/external-sort-v2/pkg/orchestrator"
 	"github.com/askiada/external-sort-v2/pkg/reader"
 	"github.com/askiada/external-sort-v2/pkg/writer"
@@ -32,38 +32,42 @@ func TestIntSlice(t *testing.T) {
 		{}, //chunk 2
 	}
 
-	chunkReaderFn := func(w model.Writer) model.Reader {
-		return &reader.IntSlice{Values: w.(*writer.IntSlice).Values}
+	chunkCreatorReaderFn := func(idx int) (model.Reader, error) {
+		return &reader.IntSlice{Values: chunkWritersCreator[idx].Values}, nil
+	}
+
+	chunkSorterReaderFn := func(idx int) (model.Reader, error) {
+		return &reader.IntSlice{Values: chunkWritersSorter[idx].Values}, nil
 	}
 
 	currCreatorWriter := 0
 
 	m := sync.Mutex{}
 
-	chunkWriterCreatorFn := func() model.Writer {
+	chunkWriterCreatorFn := func() (int, model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currCreatorWriter++ }()
-		return chunkWritersCreator[currCreatorWriter]
+		return currCreatorWriter, chunkWritersCreator[currCreatorWriter], nil
 	}
 
 	currCreatorSorter := 0
 
-	chunkWriterSorterrFn := func() model.Writer {
+	chunkWriterSorterrFn := func() (int, model.Writer, error) {
 		m.Lock()
 		defer m.Unlock()
 		defer func() { currCreatorSorter++ }()
-		return chunkWritersSorter[currCreatorSorter]
+		return currCreatorSorter, chunkWritersSorter[currCreatorSorter], nil
 	}
 
-	chunkCreator := chunkcreator.New(5, chunkReaderFn, chunkWriterCreatorFn)
+	chunkCreator := chunkcreator.New(40, chunkCreatorReaderFn, chunkWriterCreatorFn)
 
 	intKeyFn := key.AllocateInt
 	vectorFn := vector.AllocateSlice
 
-	chunkSorter := chunksorter.New(chunkWriterSorterrFn, chunkReaderFn, intKeyFn, vectorFn)
+	chunkSorter := chunksorter.New(chunkWriterSorterrFn, chunkSorterReaderFn, intKeyFn, vectorFn)
 
-	chunksMerger := chunksmerger.New(intKeyFn, vectorFn, 2, false)
+	chunksMerger := chunksmerger.New(intKeyFn, vectorFn, 16, false)
 
 	tracker := mocks.NewMockTracker(t)
 

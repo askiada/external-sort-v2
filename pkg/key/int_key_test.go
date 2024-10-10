@@ -3,7 +3,7 @@ package key_test
 import (
 	"testing"
 
-	"github.com/askiada/external-sort-v2/internal/vector/key"
+	"github.com/askiada/external-sort-v2/pkg/key"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

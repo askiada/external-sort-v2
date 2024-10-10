@@ -4,26 +4,25 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/askiada/external-sort-v2/internal/model"
 	"github.com/askiada/external-sort-v2/internal/vector"
-	"github.com/askiada/external-sort-v2/internal/vector/key"
+	"github.com/askiada/external-sort-v2/pkg/model"
 )
 
 // ChunkSorter is a sorter for chunks.
 type ChunkSorter struct {
-	keyFn         key.AllocateKeyFn
+	keyFn         model.AllocateKeyFn
 	vectorFn      vector.AllocateVectorFnfunc
-	chunkWriterFn func() model.Writer
-	chunkReaderFn func(model.Writer) model.Reader
+	chunkWriterFn func() (int, model.Writer, error)
+	chunkReaderFn func(int) (model.Reader, error)
 
 	logger              model.Logger
 	defaultLoggerFields map[string]interface{}
 }
 
 func New(
-	chunkWriterFn func() model.Writer,
-	chunkReaderFn func(model.Writer) model.Reader,
-	keyFn key.AllocateKeyFn,
+	chunkWriterFn func() (int, model.Writer, error),
+	chunkReaderFn func(int) (model.Reader, error),
+	keyFn model.AllocateKeyFn,
 	vectroFn vector.AllocateVectorFnfunc,
 ) *ChunkSorter {
 	return &ChunkSorter{
@@ -71,10 +70,13 @@ func (c *ChunkSorter) Sort(ctx context.Context, rdr model.Reader) (model.Reader,
 	}
 
 	c.trace("creating output buffer")
+
 	buffer := c.vectorFn(c.keyFn)
 	if buffer == nil {
 		return nil, ErrNilVector
 	}
+
+	c.trace("output buffer created")
 
 outer:
 	for {
@@ -88,13 +90,13 @@ outer:
 				break outer
 			}
 
-			row, err := rdr.Read()
+			row, n, err := rdr.Read()
 			if err != nil {
 				return nil, err
 			}
 
 			c.tracef("pushing row %v to buffer", row)
-			err = buffer.PushBack(row)
+			err = buffer.PushBack(row, n)
 			if err != nil {
 				return nil, err
 			}
@@ -109,8 +111,12 @@ outer:
 	buffer.Sort()
 
 	c.trace("creating chunk writer")
-	wr := c.chunkWriterFn()
-	defer wr.Close()
+	chunkIdx, wr, err := c.chunkWriterFn()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create chunk writer: %w", err)
+	}
+
+	c.debugf("chunk writer created idx: %d", chunkIdx)
 
 	c.trace("writing rows")
 	for i := range buffer.Len() {
@@ -126,11 +132,27 @@ outer:
 		}
 	}
 
-	c.trace("resetting buffer")
+	c.trace("resetting output buffer")
 	buffer.Reset()
 
-	c.trace("creating chunk reader")
-	chunkRdr := c.chunkReaderFn(wr)
+	buffer = nil
+
+	c.trace("closing chunk writer after sorting")
+	err = wr.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed to close chunk writer: %w", err)
+	}
+
+	c.infof("chunk %d sorted", chunkIdx)
+
+	c.tracef("creating chunk reader: %d", chunkIdx)
+
+	chunkRdr, err := c.chunkReaderFn(chunkIdx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create chunk reader: %w", err)
+	}
+
+	c.debugf("chunk reader created idx: %d", chunkIdx)
 
 	return chunkRdr, nil
 }

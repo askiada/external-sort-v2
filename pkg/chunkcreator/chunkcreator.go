@@ -4,23 +4,27 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/askiada/external-sort-v2/internal/model"
+	"github.com/askiada/external-sort-v2/pkg/model"
 )
 
 type ChunkCreator struct {
-	// chunkSize is a size of a chunk.
-	chunkSize           int
-	chunkWriterFn       func() model.Writer
-	chunkReaderFn       func(model.Writer) model.Reader
+	// chunkSize is a size in bytes of a chunk.
+	totalChunkMemory    int64
+	chunkWriterFn       func() (int, model.Writer, error)
+	chunkReaderFn       func(idx int) (model.Reader, error)
 	logger              model.Logger
 	defaultLoggerFields map[string]interface{}
 }
 
-func New(chunkSize int, chunkReaderFn func(model.Writer) model.Reader, chunkWriterFn func() model.Writer) *ChunkCreator {
+func New(
+	totalChunkMemory int64,
+	chunkReaderFn func(idx int) (model.Reader, error),
+	chunkWriterFn func() (int, model.Writer, error),
+) *ChunkCreator {
 	return &ChunkCreator{
-		chunkSize:     chunkSize,
-		chunkWriterFn: chunkWriterFn,
-		chunkReaderFn: chunkReaderFn,
+		totalChunkMemory: totalChunkMemory,
+		chunkWriterFn:    chunkWriterFn,
+		chunkReaderFn:    chunkReaderFn,
 	}
 }
 
@@ -32,22 +36,41 @@ func (cc *ChunkCreator) SetLogger(logger model.Logger) {
 	cc.logger = logger
 }
 
-func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks chan<- model.Reader) error {
-	currCount := 0
-	currChunk := cc.chunkWriterFn()
+func (cc *ChunkCreator) MaxMemory() int64 {
+	return cc.totalChunkMemory
+}
 
+func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks chan<- model.Reader, chunkMemory int64) error {
+	currChunkSize := int64(0)
+
+	cc.tracef("creating chunk writer")
+
+	chunkIDx, currChunk, err := cc.chunkWriterFn()
+	if err != nil {
+		return fmt.Errorf("failed to create chunk: %w", err)
+	}
+
+	cc.tracef("chunk writer created idx: %d", chunkIDx)
+
+	cc.tracef("creating chunk reader: %d", chunkIDx)
+	chunk, err := cc.chunkReaderFn(chunkIDx)
+	if err != nil {
+		return fmt.Errorf("failed to create chunk: %w", err)
+	}
+
+	cc.debugf("chunk reader created idx: %d", chunkIDx)
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case chunks <- cc.chunkReaderFn(currChunk):
+	case chunks <- chunk:
 	}
 
 	for {
 		foundNew := input.Next()
 
-		if (!foundNew || currCount >= cc.chunkSize) && currCount > 0 {
+		if (!foundNew || currChunkSize >= chunkMemory) && currChunkSize > 0 {
+			currChunkSize = 0
 
-			currCount = 0
 			cc.trace("closing chunk")
 			err := currChunk.Close()
 			if err != nil {
@@ -60,20 +83,30 @@ func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks c
 				break
 			}
 
-			currChunk = cc.chunkWriterFn()
+			chunkIDx, currChunk, err = cc.chunkWriterFn()
+			if err != nil {
+				return fmt.Errorf("failed to create chunk: %w", err)
+			}
+
+			currChunkRdr, err := cc.chunkReaderFn(chunkIDx)
+			if err != nil {
+				return fmt.Errorf("failed to create chunk: %w", err)
+			}
 
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case chunks <- cc.chunkReaderFn(currChunk):
+			case chunks <- currChunkRdr:
 				cc.trace("added chunk to chunkWriters")
 			}
+
 		}
 
-		row, err := input.Read()
+		row, n, err := input.Read()
 		if err != nil {
 			return fmt.Errorf("failed to read row: %w", err)
 		}
+
 		cc.tracef("read row: %v", row)
 
 		err = currChunk.WriteRow(ctx, row)
@@ -83,7 +116,7 @@ func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks c
 
 		cc.tracef("wrote row: %v", row)
 
-		currCount++
+		currChunkSize += n
 	}
 
 	if input.Err() != nil {
@@ -93,55 +126,79 @@ func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks c
 	return nil
 }
 
-func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chunks chan<- model.Reader) error {
-	currCount := 0
-	currChunk := cc.chunkWriterFn()
+func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chunks chan<- model.Reader, chunkMemory int64) error {
+	currChunkSize := int64(0)
+
+	cc.tracef("creating chunk writer")
+
+	chunkIdx, currChunk, err := cc.chunkWriterFn()
+	if err != nil {
+		return fmt.Errorf("failed to create sync chunk: %w", err)
+	}
+
+	cc.debugf("chunk writer created idx: %d", chunkIdx)
+
 	for {
 		foundNew := input.Next()
+		if (!foundNew || currChunkSize >= chunkMemory) && currChunkSize > 0 {
 
-		if (!foundNew || currCount >= cc.chunkSize) && currCount > 0 {
-
-			currCount = 0
-			cc.trace("closing chunk")
+			currChunkSize = 0
+			cc.trace("closing sync chunk")
 			err := currChunk.Close()
 			if err != nil {
-				return fmt.Errorf("failed to close chunk: %w", err)
+				return fmt.Errorf("failed to close sync chunk: %w", err)
 			}
+
+			cc.trace("closed sync chunk")
+
+			cc.tracef("creating chunk reader: %d", chunkIdx)
+
+			currrChunkRdr, err := cc.chunkReaderFn(chunkIdx)
+			if err != nil {
+				return fmt.Errorf("failed to create sync chunk: %w", err)
+			}
+
+			cc.infof("chunk %d created", chunkIdx)
+
+			cc.debugf("chunk reader created idx: %d", chunkIdx)
 
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case chunks <- cc.chunkReaderFn(currChunk):
-				cc.trace("added chunk to chunkWriters")
+			case chunks <- currrChunkRdr:
+				cc.trace("added sync chunk to chunkReaders")
 				if !foundNew {
 					break
 				}
 
-				cc.trace("creating new chunk")
-				currChunk = cc.chunkWriterFn()
+				chunkIdx, currChunk, err = cc.chunkWriterFn()
+				if err != nil {
+					return fmt.Errorf("failed to create chunk: %w", err)
+				}
+
+				cc.infof("chunk writer created idx: %d", chunkIdx)
 			}
 		}
 
 		if !foundNew {
 			cc.trace("closing chunkWriters")
-			// close(chunkWriters)
 			break
 		}
 
-		row, err := input.Read()
+		row, n, err := input.Read()
 		if err != nil {
 			return fmt.Errorf("failed to read row: %w", err)
 		}
-		cc.tracef("read row: %v", row)
+		cc.tracef("sync read row: %v", row)
 
 		err = currChunk.WriteRow(ctx, row)
 		if err != nil {
 			return fmt.Errorf("failed to write row: %w", err)
 		}
 
-		cc.tracef("wrote row: %v", row)
+		cc.tracef("sync wrote row: %v", row)
 
-		currCount++
+		currChunkSize += n
 	}
 
 	if input.Err() != nil {

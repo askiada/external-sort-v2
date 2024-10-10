@@ -1,10 +1,11 @@
 package vector
 
-import "github.com/askiada/external-sort-v2/internal/vector/key"
+import "github.com/askiada/external-sort-v2/pkg/model"
 
 type Element struct {
-	Key key.Key
-	Row interface{}
+	Key  model.Key
+	Row  interface{}
+	Size int64
 }
 
 // Less returns wether v1 is smaller than v2 based on the keys.

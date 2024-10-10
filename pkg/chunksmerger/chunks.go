@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/askiada/external-sort-v2/internal/model"
 	"github.com/askiada/external-sort-v2/internal/vector"
+	"github.com/askiada/external-sort-v2/pkg/model"
 	"github.com/pkg/errors"
 )
 
@@ -17,20 +17,20 @@ type chunkInfo struct {
 
 // pullSubset Add to vector the specified number of elements.
 // It stops if there is no elements left to add.
-func (c *chunkInfo) pullSubset(size int) (err error) {
-	elemIdx := 0
-	for elemIdx < size && c.reader.Next() {
-		row, err := c.reader.Read()
+func (c *chunkInfo) pullSubset(maxBufferSize int64) (err error) {
+	currBufferSize := int64(0)
+	for currBufferSize < maxBufferSize && c.reader.Next() {
+		row, n, err := c.reader.Read()
 		if err != nil {
 			return fmt.Errorf("can't read row: %w", err)
 		}
 
-		err = c.buffer.PushBack(row)
+		err = c.buffer.PushBack(row, n)
 		if err != nil {
 			return fmt.Errorf("can't push row to buffer: %w", err)
 		}
 
-		elemIdx++
+		currBufferSize += n
 	}
 
 	if c.reader.Err() != nil {
@@ -46,14 +46,14 @@ type chunkInfos struct {
 }
 
 // new Create a new chunk and initialise it.
-func (c *chunkInfos) new(rder model.Reader, size int, buffer vector.Vector) error {
+func (c *chunkInfos) new(rder model.Reader, maxBufferSize int64, buffer vector.Vector) error {
 
 	elem := &chunkInfo{
 		reader: rder,
 		buffer: buffer,
 	}
 
-	err := elem.pullSubset(size)
+	err := elem.pullSubset(maxBufferSize)
 	if err != nil {
 		return fmt.Errorf("can't pull subset: %w", err)
 	}

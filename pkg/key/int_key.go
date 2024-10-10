@@ -3,6 +3,8 @@ package key
 import (
 	"fmt"
 	"strconv"
+
+	"github.com/askiada/external-sort-v2/pkg/model"
 )
 
 // Int define an integer key.
@@ -15,7 +17,7 @@ func (k *Int) Value() interface{} {
 }
 
 // AllocateInt create a new integer key.
-func AllocateInt(row interface{}) (Key, error) {
+func AllocateInt(row interface{}) (model.Key, error) {
 	var (
 		num int64
 		err error
@@ -45,12 +47,12 @@ func AllocateInt(row interface{}) (Key, error) {
 }
 
 // Less compare two integer keys.
-func (k *Int) Less(other Key) bool {
+func (k *Int) Less(other model.Key) bool {
 	return k.value < other.(*Int).value //nolint //forcetypeassert
 }
 
 // Equal check tow integer keys are equal.
-func (k *Int) Equal(other Key) bool {
+func (k *Int) Equal(other model.Key) bool {
 	return k.value == other.(*Int).value //nolint //forcetypeassert
 }
 
@@ -64,7 +66,7 @@ func (k *IntFromSlice) Value() interface{} {
 }
 
 // AllocateIntFromSlice create a new integer key from a position in a slice of integers.
-func AllocateIntFromSlice(row interface{}, intIndex int) (Key, error) {
+func AllocateIntFromSlice(row interface{}, intIndex int) (model.Key, error) {
 
 	if intIndex < 0 {
 		return nil, fmt.Errorf("position %d is out of range", intIndex)
@@ -119,11 +121,11 @@ func AllocateIntFromSlice(row interface{}, intIndex int) (Key, error) {
 }
 
 // Less compare two integer keys.
-func (k *IntFromSlice) Less(other Key) bool {
+func (k *IntFromSlice) Less(other model.Key) bool {
 	return k.value < other.(*IntFromSlice).value //nolint //forcetypeassert
 }
 
 // Equal check tow integer keys are equal.
-func (k *IntFromSlice) Equal(other Key) bool {
+func (k *IntFromSlice) Equal(other model.Key) bool {
 	return k.value == other.(*IntFromSlice).value //nolint //forcetypeassert
 }

@@ -8,4 +8,5 @@ import "context"
 type ChunksMerger interface {
 	// Merge merges the chunks.
 	Merge(ctx context.Context, chunks []Reader, outputWriter Writer) (err error)
+	MaxMemory() int64
 }

@@ -7,6 +7,7 @@ import "context"
 //go:generate mockery --name ChunkCreator --structname MockChunkCreator --filename chunk_creator_mock.go
 type ChunkCreator interface {
 	// Create creates chunks.
-	Create(ctx context.Context, input Reader, chunks chan<- Reader) error
-	SyncCreate(ctx context.Context, input Reader, chunks chan<- Reader) error
+	Create(ctx context.Context, input Reader, chunks chan<- Reader, chunkMemory int64) error
+	SyncCreate(ctx context.Context, input Reader, chunks chan<- Reader, chunkMemory int64) error
+	MaxMemory() int64
 }

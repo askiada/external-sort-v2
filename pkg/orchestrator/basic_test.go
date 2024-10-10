@@ -10,8 +10,9 @@ import (
 	"testing"
 
 	"github.com/askiada/external-sort-v2/internal/logger"
-	"github.com/askiada/external-sort-v2/internal/model"
-	"github.com/askiada/external-sort-v2/internal/vector/key"
+
+	"github.com/askiada/external-sort-v2/pkg/key"
+	"github.com/askiada/external-sort-v2/pkg/model"
 	"github.com/askiada/external-sort-v2/pkg/orchestrator"
 	"github.com/askiada/external-sort-v2/pkg/reader"
 	"github.com/askiada/external-sort-v2/pkg/writer"
@@ -30,31 +31,39 @@ func TestBasicOrchestrator(t *testing.T) {
 	log := logger.NewLogrus()
 	log.SetLevel("trace")
 
-	creatorRdrFn := func(rdr io.Reader) model.Reader {
+	creatorRdrFn := func(rdr io.Reader) (model.Reader, error) {
 		chunkCSVReader := csv.NewReader(rdr)
 
 		return reader.NewSeparatedValues(chunkCSVReader, ',')
 	}
 
-	creatorWrFn := func(wr io.WriteCloser) model.Writer {
+	creatorWrFn := func(wr io.WriteCloser) (model.Writer, error) {
 		return writer.NewSeparatedValues(wr, ',')
 	}
 
-	chunkRdrFn := func(idx int) io.Reader {
-		chunkFile, err := os.Open(fmt.Sprintf("testdata/chunks/chunk_sorted_%d.csv", idx))
-		require.NoError(t, err)
+	chunkRdrFn := func(step string, idx int) (io.Reader, error) {
+		chunkFile, err := os.Open(fmt.Sprintf("testdata/chunks/chunk_sorted_%s_%d.csv", step, idx))
+		if err != nil {
+			return nil, err
+		}
 
-		return chunkFile
+		return chunkFile, nil
 	}
 
-	chunkWrFn := func(idx int) io.WriteCloser {
-		chunkFileWriter, err := os.OpenFile(fmt.Sprintf("testdata/chunks/chunk_sorted_%d.csv", idx), os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
-		require.NoError(t, err)
+	chunkWrFn := func(step string, idx int) (io.WriteCloser, error) {
+		chunkFileWriter, err := os.OpenFile(
+			fmt.Sprintf("testdata/chunks/chunk_sorted_%s_%d.csv", step, idx),
+			os.O_CREATE|os.O_TRUNC|os.O_RDWR,
+			os.ModePerm,
+		)
+		if err != nil {
+			return nil, err
+		}
 
-		return chunkFileWriter
+		return chunkFileWriter, nil
 	}
 
-	tsvKeyFn := func(row interface{}) (key.Key, error) {
+	tsvKeyFn := func(row interface{}) (model.Key, error) {
 		tKey, err := key.AllocateCsv(row, 1)
 		if err != nil {
 			return tKey, err
@@ -63,7 +72,7 @@ func TestBasicOrchestrator(t *testing.T) {
 		return key.AllocateInt(tKey.Value())
 	}
 
-	orch := orchestrator.NewBasic(creatorRdrFn, creatorWrFn, chunkRdrFn, chunkWrFn, tsvKeyFn, 5, 5, false)
+	orch := orchestrator.NewBasic(creatorRdrFn, creatorWrFn, chunkRdrFn, chunkWrFn, tsvKeyFn, 5, false)
 
 	orch.SetLogger(log)
 	ctx := context.Background()
@@ -72,13 +81,15 @@ func TestBasicOrchestrator(t *testing.T) {
 
 	inputCSVReader := csv.NewReader(inputFile)
 
-	inputReader := reader.NewSeparatedValues(inputCSVReader, ',')
+	inputReader, err := reader.NewSeparatedValues(inputCSVReader, ',', reader.WithSeparatedValuesHeaders(1))
+	require.NoError(t, err)
 
 	outputFile, err := os.OpenFile("testdata/output.csv", os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
 	require.NoError(t, err)
-	outputWriter := writer.NewSeparatedValues(outputFile, ',')
+	outputWriter, err := writer.NewSeparatedValues(outputFile, ',', writer.WithSeparatedValuesHeaders(inputReader.Headers()))
+	require.NoError(t, err)
 
-	err = orch.Sort(ctx, inputReader, outputWriter, 3, 3)
+	err = orch.Sort(ctx, inputReader, outputWriter)
 	require.NoError(t, err)
 
 	outputFile, err = os.Open("testdata/output.csv")
@@ -86,6 +97,7 @@ func TestBasicOrchestrator(t *testing.T) {
 
 	outputScanner := bufio.NewScanner(outputFile)
 	expected := []string{
+		"name,count",
 		"giraffe,1",
 		"test,2",
 		"no idea,3",
