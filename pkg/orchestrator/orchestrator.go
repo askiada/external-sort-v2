@@ -166,7 +166,7 @@ func (o *Orchestrator) Sort(
 
 			return sortedChunk, nil
 		},
-		pipeline.StepConcurrency[model.Reader](2),
+		pipeline.StepConcurrency[model.Reader](1),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to add step: %w", err)
