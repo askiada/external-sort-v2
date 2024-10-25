@@ -49,7 +49,7 @@ func TestCreate(t *testing.T) {
 		defer wg.Done()
 		defer close(chunkChan)
 		// Call the Create function
-		err := cc.Create(ctx, mockReader, chunkChan)
+		err := cc.Create(ctx, mockReader, chunkChan, 12)
 		assert.NoError(t, err)
 	}()
 
@@ -105,7 +105,7 @@ func TestCreate2chunks(t *testing.T) {
 		defer wg.Done()
 		defer close(chunkChan)
 		// Call the Create function
-		err := cc.Create(ctx, mockReader, chunkChan)
+		err := cc.Create(ctx, mockReader, chunkChan, 6)
 		assert.NoError(t, err)
 	}()
 
@@ -169,7 +169,7 @@ func TestCreate2chunksV2(t *testing.T) {
 		defer wg.Done()
 		defer close(chunkChan)
 		// Call the Create function
-		err := cc.Create(ctx, mockReader, chunkChan)
+		err := cc.Create(ctx, mockReader, chunkChan, 12)
 		assert.NoError(t, err)
 	}()
 
