@@ -74,7 +74,7 @@ func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks c
 			cc.trace("closing chunk")
 			err := currChunk.Close()
 			if err != nil {
-				return fmt.Errorf("failed to close chunk: %w", err)
+				return fmt.Errorf("failed to close chunk %d: %w", chunkIDx, err)
 			}
 
 			if !foundNew {
@@ -85,12 +85,12 @@ func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks c
 
 			chunkIDx, currChunk, err = cc.chunkWriterFn()
 			if err != nil {
-				return fmt.Errorf("failed to create chunk: %w", err)
+				return fmt.Errorf("failed to create chunk (previous chunkID %d): %w", chunkIDx, err)
 			}
 
 			currChunkRdr, err := cc.chunkReaderFn(chunkIDx)
 			if err != nil {
-				return fmt.Errorf("failed to create chunk: %w", err)
+				return fmt.Errorf("failed to create chunk %d: %w", chunkIDx, err)
 			}
 
 			select {
@@ -104,14 +104,14 @@ func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks c
 
 		row, n, err := input.Read()
 		if err != nil {
-			return fmt.Errorf("failed to read row: %w", err)
+			return fmt.Errorf("failed to read row while processing chunk %d: %w", chunkIDx, err)
 		}
 
 		cc.tracef("read row: %v", row)
 
 		err = currChunk.WriteRow(ctx, row)
 		if err != nil {
-			return fmt.Errorf("failed to write row: %w", err)
+			return fmt.Errorf("failed to write row [%v] in chunk %d: %w", row, chunkIDx, err)
 		}
 
 		cc.tracef("wrote row: %v", row)
@@ -120,7 +120,7 @@ func (cc *ChunkCreator) Create(ctx context.Context, input model.Reader, chunks c
 	}
 
 	if input.Err() != nil {
-		return fmt.Errorf("failed to read row: %w", input.Err())
+		return fmt.Errorf("failed to read row from input: %w", input.Err())
 	}
 
 	return nil
@@ -146,7 +146,7 @@ func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chun
 			cc.trace("closing sync chunk")
 			err := currChunk.Close()
 			if err != nil {
-				return fmt.Errorf("failed to close sync chunk: %w", err)
+				return fmt.Errorf("failed to close sync chunk %d: %w", chunkIdx, err)
 			}
 
 			cc.trace("closed sync chunk")
@@ -155,7 +155,7 @@ func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chun
 
 			currrChunkRdr, err := cc.chunkReaderFn(chunkIdx)
 			if err != nil {
-				return fmt.Errorf("failed to create sync chunk: %w", err)
+				return fmt.Errorf("failed to create sync chunk %d: %w", chunkIdx, err)
 			}
 
 			cc.infof("chunk %d created", chunkIdx)
@@ -173,7 +173,7 @@ func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chun
 
 				chunkIdx, currChunk, err = cc.chunkWriterFn()
 				if err != nil {
-					return fmt.Errorf("failed to create chunk: %w", err)
+					return fmt.Errorf("failed to create chunk (previous chunkID %d): %w", chunkIdx, err)
 				}
 
 				cc.infof("chunk writer created idx: %d", chunkIdx)
@@ -187,13 +187,13 @@ func (cc *ChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chun
 
 		row, n, err := input.Read()
 		if err != nil {
-			return fmt.Errorf("failed to read row: %w", err)
+			return fmt.Errorf("failed to read row while processing chunk %d: %w", chunkIdx, err)
 		}
 		cc.tracef("sync read row: %v", row)
 
 		err = currChunk.WriteRow(ctx, row)
 		if err != nil {
-			return fmt.Errorf("failed to write row: %w", err)
+			return fmt.Errorf("failed to write row [%v] in chunk %d: %w", row, chunkIdx, err)
 		}
 
 		cc.tracef("sync wrote row: %v", row)
