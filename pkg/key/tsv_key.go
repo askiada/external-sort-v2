@@ -18,11 +18,14 @@ func AllocateCsv(row interface{}, pos ...int) (model.Key, error) {
 	strBuilder := strings.Builder{}
 
 	for i, p := range pos {
-		if len(splitted) < p+1 {
+		if len(splitted) >= p {
 			return nil, fmt.Errorf("position %d is out of range", p)
 		}
 
-		strBuilder.WriteString(fmt.Sprint(splitted[p]))
+		_, err := strBuilder.WriteString(splitted[p])
+		if err != nil {
+			return nil, fmt.Errorf("failed to write string: %w", err)
+		}
 
 		if i < len(pos)-1 {
 			strBuilder.WriteString(salt)
