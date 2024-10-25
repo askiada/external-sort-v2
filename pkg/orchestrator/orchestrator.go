@@ -157,7 +157,7 @@ func (o *Orchestrator) Sort(
 
 			sortedChunk, err := o.ChunkSorter.Sort(ctx, chunk)
 			if err != nil {
-				return nil, fmt.Errorf("%s %w", err.Error(), ErrFailedToSortChunk)
+				return nil, fmt.Errorf("%s: %w", err.Error(), ErrFailedToSortChunk)
 			}
 
 			if sortedChunk == nil {

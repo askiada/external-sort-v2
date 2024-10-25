@@ -98,7 +98,7 @@ outer:
 			c.tracef("pushing row %v to buffer", row)
 			err = buffer.PushBack(row, n)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to push row [%+v] to buffer: %w", row, err)
 			}
 		}
 	}
@@ -113,7 +113,7 @@ outer:
 	c.trace("creating chunk writer")
 	chunkIdx, wr, err := c.chunkWriterFn()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create chunk writer: %w", err)
+		return nil, fmt.Errorf("failed to create chunk writer (previous chunkID %d): %w", chunkIdx, err)
 	}
 
 	c.debugf("chunk writer created idx: %d", chunkIdx)
@@ -127,7 +127,7 @@ outer:
 			c.tracef("writing row %d", i)
 			err := wr.WriteRow(ctx, buffer.Get(i).Row)
 			if err != nil {
-				return nil, fmt.Errorf("failed to write row: %w", err)
+				return nil, fmt.Errorf("failed to write row [%+v] in chunk %d: %w", buffer.Get(i).Row, chunkIdx, err)
 			}
 		}
 	}
@@ -149,7 +149,7 @@ outer:
 
 	chunkRdr, err := c.chunkReaderFn(chunkIdx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create chunk reader: %w", err)
+		return nil, fmt.Errorf("failed to create chunk %d reader: %w", chunkIdx, err)
 	}
 
 	c.debugf("chunk reader created idx: %d", chunkIdx)
