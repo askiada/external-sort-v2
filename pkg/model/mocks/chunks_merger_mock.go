@@ -14,6 +14,24 @@ type MockChunksMerger struct {
 	mock.Mock
 }
 
+// MaxMemory provides a mock function with given fields:
+func (_m *MockChunksMerger) MaxMemory() int64 {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for MaxMemory")
+	}
+
+	var r0 int64
+	if rf, ok := ret.Get(0).(func() int64); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	return r0
+}
+
 // Merge provides a mock function with given fields: ctx, chunks, outputWriter
 func (_m *MockChunksMerger) Merge(ctx context.Context, chunks []model.Reader, outputWriter model.Writer) error {
 	ret := _m.Called(ctx, chunks, outputWriter)

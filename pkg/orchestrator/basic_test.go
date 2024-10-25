@@ -79,6 +79,9 @@ func TestBasicOrchestrator(t *testing.T) {
 	inputFile, err := os.Open("testdata/input.csv")
 	require.NoError(t, err)
 
+	stat, err := os.Stat("testdata/input.csv")
+	require.NoError(t, err)
+
 	inputCSVReader := csv.NewReader(inputFile)
 
 	inputReader, err := reader.NewSeparatedValues(inputCSVReader, ',', reader.WithSeparatedValuesHeaders(1))
@@ -89,7 +92,7 @@ func TestBasicOrchestrator(t *testing.T) {
 	outputWriter, err := writer.NewSeparatedValues(outputFile, ',', writer.WithSeparatedValuesHeaders(inputReader.Headers()))
 	require.NoError(t, err)
 
-	err = orch.Sort(ctx, inputReader, outputWriter)
+	err = orch.Sort(ctx, stat.Size(), inputReader, outputWriter)
 	require.NoError(t, err)
 
 	outputFile, err = os.Open("testdata/output.csv")

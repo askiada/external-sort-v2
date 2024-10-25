@@ -5,7 +5,6 @@ package mocks
 import (
 	context "context"
 
-	model "github.com/askiada/external-sort-v2/pkg/model"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -25,24 +24,6 @@ func (_m *MockWriter) Close() error {
 	var r0 error
 	if rf, ok := ret.Get(0).(func() error); ok {
 		r0 = rf()
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// Write provides a mock function with given fields: ctx, rdr
-func (_m *MockWriter) Write(ctx context.Context, rdr model.Reader) error {
-	ret := _m.Called(ctx, rdr)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Write")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, model.Reader) error); ok {
-		r0 = rf(ctx, rdr)
 	} else {
 		r0 = ret.Error(0)
 	}

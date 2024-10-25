@@ -125,6 +125,9 @@ func TestCSV2(t *testing.T) {
 	inputFile, err := os.Open("testdata/input.csv")
 	require.NoError(t, err)
 
+	stat, err := os.Stat("testdata/input.csv")
+	require.NoError(t, err)
+
 	inputReader, err := reader.NewSeparatedValues(csv.NewReader(inputFile), ',')
 	require.NoError(t, err)
 
@@ -133,7 +136,7 @@ func TestCSV2(t *testing.T) {
 	outputWriter, err := writer.NewSeparatedValues(outputFile, ',')
 	require.NoError(t, err)
 
-	err = orch.Sort(context.Background(), inputReader, outputWriter, 3, 3)
+	err = orch.Sort(context.Background(), stat.Size(), inputReader, outputWriter, 3, 3)
 	require.NoError(t, err)
 
 	// read output file line by line and check if it is sorted

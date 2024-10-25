@@ -54,7 +54,7 @@ func sort(ctx context.Context, inputS3URL, outputS3URL string, log model.Logger)
 
 		chunkCSVReader := csv.NewReader(rdr)
 
-		return reader.NewSeparatedValues(chunkCSVReader, ',')
+		return reader.NewSeparatedValues(chunkCSVReader, '\t')
 	}
 
 	creatorWrFn := func(wr io.WriteCloser) (model.Writer, error) {
@@ -62,7 +62,7 @@ func sort(ctx context.Context, inputS3URL, outputS3URL string, log model.Logger)
 		defer log.WithFieldsTrace(fields, "writer created")
 		log.WithFieldsTrace(fields, "creating writer")
 
-		return writer.NewSeparatedValues(wr, ',')
+		return writer.NewSeparatedValues(wr, '\t')
 	}
 
 	ouputBucket, outputKey, err := s3handler.Parse(outputS3URL)
@@ -94,7 +94,7 @@ func sort(ctx context.Context, inputS3URL, outputS3URL string, log model.Logger)
 	}
 
 	tsvKeyFn := func(row interface{}) (model.Key, error) {
-		tKey, err := key.AllocateCsv(row, 1, 2)
+		tKey, err := key.AllocateCsv(row, 4, 7, 13)
 		if err != nil {
 			return nil, err
 		}
@@ -102,7 +102,7 @@ func sort(ctx context.Context, inputS3URL, outputS3URL string, log model.Logger)
 		return key.AllocateUpperString(tKey.Value().(string))
 	}
 
-	orch := orchestrator.NewBasic(creatorRdrFn, creatorWrFn, chunkRdrFn, chunkWrFn, tsvKeyFn, 1_000_000, false)
+	orch := orchestrator.NewBasic(creatorRdrFn, creatorWrFn, chunkRdrFn, chunkWrFn, tsvKeyFn, 5000, false)
 
 	orch.SetLogger(log)
 
@@ -112,7 +112,7 @@ func sort(ctx context.Context, inputS3URL, outputS3URL string, log model.Logger)
 	}
 
 	inputCSVReader := csv.NewReader(inputS3Reader)
-	inputReader, err := reader.NewSeparatedValues(inputCSVReader, ',', reader.WithSeparatedValuesHeaders(1))
+	inputReader, err := reader.NewSeparatedValues(inputCSVReader, '\t', reader.WithSeparatedValuesHeaders(1))
 	if err != nil {
 		return fmt.Errorf("can't create input reader: %w", err)
 	}
@@ -122,7 +122,7 @@ func sort(ctx context.Context, inputS3URL, outputS3URL string, log model.Logger)
 		return fmt.Errorf("can't create output s3 writer: %w", err)
 	}
 
-	outputWriter, err := writer.NewSeparatedValues(outputS3Writer, ',', writer.WithSeparatedValuesHeaders(inputReader.Headers()))
+	outputWriter, err := writer.NewSeparatedValues(outputS3Writer, '\t', writer.WithSeparatedValuesHeaders(inputReader.Headers()))
 	if err != nil {
 		return fmt.Errorf("can't create output writer: %w", err)
 	}

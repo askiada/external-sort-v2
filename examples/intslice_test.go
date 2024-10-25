@@ -81,7 +81,7 @@ func TestIntSlice(t *testing.T) {
 
 	outputWriter := &writer.IntSlice{}
 
-	err := orch.Sort(context.Background(), inputReader, outputWriter, 1, 1)
+	err := orch.Sort(context.Background(), 80, inputReader, outputWriter, 1, 1)
 	require.NoError(t, err)
 
 	require.Equal(t, []int{10, 1, 9, 2, 8}, chunkWritersCreator[0].Values)

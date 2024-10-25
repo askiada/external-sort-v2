@@ -82,7 +82,7 @@ aws --endpoint-url=$AWS_ENDPOINT s3api put-bucket-acl --bucket test-bucket --acl
 aws --endpoint-url=$AWS_ENDPOINT s3 sync "${BASEDIR}/testdata/input" s3://test-bucket/input
 
 
-export INPUT_S3_URL="s3://test-bucket/input/mood_media_admin_no_rollup.csv"
+export INPUT_S3_URL="s3://test-bucket/input/sample.tsv"
 export OUTPUT_S3_URL="s3://test-bucket/output/sample_sorted.tsv"
 
 go build -o bin/csvs3 examples/csvs3/main.go

@@ -14,17 +14,17 @@ type MockChunkCreator struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, input, chunks
-func (_m *MockChunkCreator) Create(ctx context.Context, input model.Reader, chunks chan<- model.Reader) error {
-	ret := _m.Called(ctx, input, chunks)
+// Create provides a mock function with given fields: ctx, input, chunks, chunkMemory
+func (_m *MockChunkCreator) Create(ctx context.Context, input model.Reader, chunks chan<- model.Reader, chunkMemory int64) error {
+	ret := _m.Called(ctx, input, chunks, chunkMemory)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, model.Reader, chan<- model.Reader) error); ok {
-		r0 = rf(ctx, input, chunks)
+	if rf, ok := ret.Get(0).(func(context.Context, model.Reader, chan<- model.Reader, int64) error); ok {
+		r0 = rf(ctx, input, chunks, chunkMemory)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -32,17 +32,35 @@ func (_m *MockChunkCreator) Create(ctx context.Context, input model.Reader, chun
 	return r0
 }
 
-// SyncCreate provides a mock function with given fields: ctx, input, chunks
-func (_m *MockChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chunks chan<- model.Reader) error {
-	ret := _m.Called(ctx, input, chunks)
+// MaxMemory provides a mock function with given fields:
+func (_m *MockChunkCreator) MaxMemory() int64 {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for MaxMemory")
+	}
+
+	var r0 int64
+	if rf, ok := ret.Get(0).(func() int64); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	return r0
+}
+
+// SyncCreate provides a mock function with given fields: ctx, input, chunks, chunkMemory
+func (_m *MockChunkCreator) SyncCreate(ctx context.Context, input model.Reader, chunks chan<- model.Reader, chunkMemory int64) error {
+	ret := _m.Called(ctx, input, chunks, chunkMemory)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SyncCreate")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, model.Reader, chan<- model.Reader) error); ok {
-		r0 = rf(ctx, input, chunks)
+	if rf, ok := ret.Get(0).(func(context.Context, model.Reader, chan<- model.Reader, int64) error); ok {
+		r0 = rf(ctx, input, chunks, chunkMemory)
 	} else {
 		r0 = ret.Error(0)
 	}

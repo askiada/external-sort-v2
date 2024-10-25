@@ -157,7 +157,7 @@ func TestCSV(t *testing.T) {
 
 	outputWriter := &writer.IntSlice{}
 
-	err = orch.Sort(context.Background(), inputReader, outputWriter, 2, 0)
+	err = orch.Sort(context.Background(), 21, inputReader, outputWriter, 2, 0)
 	require.NoError(t, err)
 	/*
 		require.Equal(t, []int{10, 1, 9, 2, 8}, chunkWritersCreator[0].Values)
