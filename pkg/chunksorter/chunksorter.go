@@ -98,7 +98,9 @@ outer:
 			c.tracef("pushing row %v to buffer", row)
 			err = buffer.PushBack(row, n)
 			if err != nil {
-				return nil, fmt.Errorf("failed to push row [%+v] to buffer: %w", row, err)
+				c.logger.Errorf("failed to push row [%+v] to buffer: %w", row, err)
+
+				continue outer
 			}
 		}
 	}
