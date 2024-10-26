@@ -27,7 +27,7 @@ func (c *chunkInfo) pullSubset(maxBufferSize int64) (err error) {
 
 		err = c.buffer.PushBack(row, n)
 		if err != nil {
-			return fmt.Errorf("can't push row to buffer: %w", err)
+			return fmt.Errorf("can't push row [%v] to buffer: %w", row, err)
 		}
 
 		currBufferSize += n
