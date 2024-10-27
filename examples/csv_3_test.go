@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/askiada/external-sort-v2/internal/logger"
-	"github.com/askiada/external-sort-v2/internal/vector"
 	"github.com/askiada/external-sort-v2/pkg/chunkcreator"
 	"github.com/askiada/external-sort-v2/pkg/chunksmerger"
 	"github.com/askiada/external-sort-v2/pkg/chunksorter"
@@ -20,6 +19,7 @@ import (
 	"github.com/askiada/external-sort-v2/pkg/model/mocks"
 	"github.com/askiada/external-sort-v2/pkg/orchestrator"
 	"github.com/askiada/external-sort-v2/pkg/reader"
+	"github.com/askiada/external-sort-v2/pkg/vector"
 	"github.com/askiada/external-sort-v2/pkg/writer"
 	"github.com/stretchr/testify/require"
 )

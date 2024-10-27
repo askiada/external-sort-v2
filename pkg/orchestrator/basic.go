@@ -7,12 +7,12 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/askiada/external-sort-v2/internal/vector"
 	"github.com/askiada/external-sort-v2/pkg/chunkcreator"
 	"github.com/askiada/external-sort-v2/pkg/chunksmerger"
 	"github.com/askiada/external-sort-v2/pkg/chunksorter"
 	"github.com/askiada/external-sort-v2/pkg/model"
 	"github.com/askiada/external-sort-v2/pkg/model/mocks"
+	"github.com/askiada/external-sort-v2/pkg/vector"
 )
 
 type IOToReaderFn func(io.Reader) (model.Reader, error)

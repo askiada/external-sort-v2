@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/askiada/external-sort-v2/internal/vector"
 	"github.com/askiada/external-sort-v2/pkg/model"
+	"github.com/askiada/external-sort-v2/pkg/vector"
 	"github.com/pkg/errors"
 )
 

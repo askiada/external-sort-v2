@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/askiada/external-sort-v2/internal/vector"
 	"github.com/askiada/external-sort-v2/pkg/model"
+	"github.com/askiada/external-sort-v2/pkg/vector"
 )
 
 // ChunkSorter is a sorter for chunks.

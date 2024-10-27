@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/askiada/external-sort-v2/internal/vector"
-	vectormocks "github.com/askiada/external-sort-v2/internal/vector/mocks"
 	"github.com/askiada/external-sort-v2/pkg/chunksorter"
 	"github.com/askiada/external-sort-v2/pkg/model"
 	"github.com/askiada/external-sort-v2/pkg/model/mocks"
 	keymocks "github.com/askiada/external-sort-v2/pkg/model/mocks"
+	"github.com/askiada/external-sort-v2/pkg/vector"
+	vectormocks "github.com/askiada/external-sort-v2/pkg/vector/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

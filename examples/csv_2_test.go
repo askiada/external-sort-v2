@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/askiada/external-sort-v2/internal/logger"
-	"github.com/askiada/external-sort-v2/internal/vector"
 	"github.com/askiada/external-sort-v2/pkg/key"
+	"github.com/askiada/external-sort-v2/pkg/vector"
 
 	"github.com/askiada/external-sort-v2/pkg/chunkcreator"
 	"github.com/askiada/external-sort-v2/pkg/chunksmerger"

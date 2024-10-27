@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	vector "github.com/askiada/external-sort-v2/internal/vector"
+	vector "github.com/askiada/external-sort-v2/pkg/vector"
 	model "github.com/askiada/external-sort-v2/pkg/model"
 	mock "github.com/stretchr/testify/mock"
 )
