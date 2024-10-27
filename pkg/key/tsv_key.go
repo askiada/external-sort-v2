@@ -18,7 +18,7 @@ func AllocateCsv(row interface{}, pos ...int) (model.Key, error) {
 	strBuilder := strings.Builder{}
 
 	for i, p := range pos {
-		if len(splitted) >= p {
+		if p >= len(splitted) {
 			return nil, fmt.Errorf("position %d is out of range", p)
 		}
 
