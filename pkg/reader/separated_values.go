@@ -91,3 +91,11 @@ func WithSeparatedValuesHeaders(numRows int) SeparatedValuesReaderOption {
 		return nil
 	}
 }
+
+func WithHeaders(headers [][]string) SeparatedValuesReaderOption {
+	return func(s *SeparatedValuesReader) error {
+		s.headers = headers
+
+		return nil
+	}
+}
