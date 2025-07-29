@@ -42,6 +42,10 @@ func NewBasic(
 	maxMemoryBytes int64,
 	dropDuplicates bool,
 ) *BasicOrchestrator {
+	// Ensure that we have enough memory for the orchestrator to work
+	// it looks like the maxMemoryBytes must be divided by 7 as the sorter
+	// uses 7 times more memory than the chunk file size
+	maxMemoryBytes /= 7
 
 	chunkCreatorReaderFn := func(idx int) (model.Reader, error) {
 		curr, err := chunkRdrFn("sort", idx)
@@ -131,7 +135,7 @@ func (bo *BasicOrchestrator) SetLogger(logger model.Logger) {
 	bo.orch.SetLogger(logger)
 }
 
-const defaultSortConcurrency = 10
+const defaultSortConcurrency = 1
 
 func (bo *BasicOrchestrator) Sort(ctx context.Context, inputContentLenght int64, input model.Reader, output model.Writer) error {
 	return bo.orch.Sort(ctx, inputContentLenght, input, output, defaultSortConcurrency, 0)
