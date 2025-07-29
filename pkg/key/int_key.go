@@ -67,7 +67,6 @@ func (k *IntFromSlice) Value() interface{} {
 
 // AllocateIntFromSlice create a new integer key from a position in a slice of integers.
 func AllocateIntFromSlice(row interface{}, intIndex int) (model.Key, error) {
-
 	if intIndex < 0 {
 		return nil, fmt.Errorf("position %d is out of range", intIndex)
 	}

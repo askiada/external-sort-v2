@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/askiada/external-sort-v2/pkg/model"
 	"github.com/pkg/errors"
+
+	"github.com/askiada/external-sort-v2/pkg/model"
 )
 
 type SeparatedValuesWriter struct {

@@ -7,16 +7,16 @@ import (
 // Allocate define a vector and methods to read and write it.
 type Allocate struct {
 	Vector func(func(row interface{}) (model.Key, error)) Vector
-	//FnReader reader.Config
-	//FnWriter writer.Config
+	// FnReader reader.Config
+	// FnWriter writer.Config
 	Key func(elem interface{}) (model.Key, error)
 }
 
 // DefaultVector define a helper function to allocate a vector.
 func DefaultVector(allocateKey func(elem interface{}) (model.Key, error) /*, fnReader reader.Config, fnWr writer.Config*/) *Allocate {
 	return &Allocate{
-		//FnReader: fnReader,
-		//FnWriter: fnWr,
+		// FnReader: fnReader,
+		// FnWriter: fnWr,
 		Vector: AllocateSlice,
 		Key:    allocateKey,
 	}

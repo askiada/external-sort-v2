@@ -3,13 +3,13 @@ package key_test
 import (
 	"testing"
 
-	"github.com/askiada/external-sort-v2/pkg/key"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/askiada/external-sort-v2/pkg/key"
 )
 
 func TestAllocateInt(t *testing.T) {
-
 	tcs := []struct {
 		row interface{}
 		err error
@@ -76,7 +76,6 @@ func TestIntEqual(t *testing.T) {
 }
 
 func TestAllocateIntFromSlice(t *testing.T) {
-
 	tcs := []struct {
 		row      interface{}
 		intIndex int
