@@ -1,9 +1,11 @@
 module github.com/askiada/external-sort-v2
 
-go 1.22.1
+go 1.24
+
+toolchain go1.24.4
 
 require (
-	github.com/askiada/go-pipeline v1.0.1
+	github.com/askiada/go-pipeline v1.0.3
 	github.com/aws/aws-sdk-go-v2 v1.31.0
 	github.com/aws/aws-sdk-go-v2/config v1.27.39
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.25
