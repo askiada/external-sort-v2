@@ -1,0 +1,23 @@
+networks:
+  external_sort_dc_network:
+services:
+  localstack_local:
+    image: localstack/localstack:latest
+    container_name: external_sort_localstack_local
+    healthcheck:
+      test: [ "CMD-SHELL", "awslocal s3 ls || exit 1" ]
+      start_period: 0s
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    ports:
+      - "${EXTERNAL_LOCALSTACK_PORT}:4566" # Default port forward
+    profiles: ["external"]
+    environment:
+      - SERVICES=s3 #AWS Services that you want in your localstack
+      - DEBUG=0 # Debug level 1 if you want to logs, 0 if you want to disable
+      - START_WEB=0 # Flag to control whether the Web UI should be started in Docker
+      - LAMBDA_REMOTE_DOCKER=0
+      - AWS_DEFAULT_REGION=us-west-1
+    networks:
+      - external_sort_dc_network

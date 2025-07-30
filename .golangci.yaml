@@ -1,0 +1,124 @@
+version: "2"
+run:
+  build-tags:
+    - integration
+  tests: true
+  allow-parallel-runners: true
+linters:
+  default: all
+  disable:
+    - depguard
+    - exhaustruct
+    - paralleltest
+    - noinlineerr # Seriously some people are purists
+  settings:
+    cyclop:
+      max-complexity: 15
+    funlen:
+      lines: 110
+      statements: 70
+    goconst:
+      min-len: 2
+      min-occurrences: 2
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+    gocyclo:
+      min-complexity: 15
+    godot:
+      capital: true
+    govet:
+      disable:
+        - fieldalignment
+      settings:
+        printf:
+          funcs:
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+    lll:
+      line-length: 140
+    misspell:
+      locale: UK
+    mnd:
+      ignored-numbers:
+        - '-1'
+        - '0'
+        - '1'
+        - '2'
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+    unparam:
+      check-exported: true
+    varnamelen:
+      min-name-length: 2
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - bodyclose
+          - dupl
+          - err113
+          - errcheck
+          - funlen
+          - gochecknoglobals
+          - goconst
+          - gocritic
+          - gosec
+          - govet
+          - lll
+          - maintidx
+          - paralleltest
+          - revive
+          - unparam
+          - varnamelen
+          - wrapcheck
+        path: _test\.go
+      - linters:
+          - errcheck
+        path: testing
+      - linters:
+          - cyclop
+        path: (.+)_test\.go
+    paths:
+      - tmp
+      - bin
+      - scripts
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  fix: false
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/blokur)
+        - localmodule
+      custom-order: true
+    goimports:
+      local-prefixes:
+        - github.com/blokur/bk-mr-intermed-inserter
+  exclusions:
+    generated: lax
+    paths:
+      - tmp
+      - bin
+      - scripts
+      - third_party$
+      - builtin$
+      - examples$

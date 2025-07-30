@@ -3,7 +3,7 @@ package reader
 import (
 	"sync"
 
-	"github.com/askiada/external-sort-v2/internal/model"
+	"github.com/askiada/external-sort-v2/pkg/model"
 )
 
 type IntSlice struct {
@@ -25,10 +25,11 @@ func (r *IntSlice) Next() bool {
 	return false
 }
 
-func (r *IntSlice) Read() (interface{}, error) {
+func (r *IntSlice) Read() (interface{}, int64, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.currValue, nil
+	// It should be 4 bytes for each int with x32 architecture
+	return r.currValue, 8, nil
 }
 
 func (r *IntSlice) Err() error {
